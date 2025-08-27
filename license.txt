@@ -1,0 +1,54 @@
+# StagePI Distro Builder
+# https://github.com/bama-box/stagepi
+#
+# This project builds a custom Raspberry Pi distribution using pi-gen and
+# then burns using rpi-imager.
+# It includes configuration and packages for audio streaming, Bluetooth, and web-based control,
+# including:
+#   - shairport-sync
+#   - bluez
+#   - python3, python3-netifaces, python3-flask
+#   - pipewire, pipewire-audio, pipewire-pulse, wireplumber, libspa-0.2-bluetooth
+#   - gstreamer1.0 tools and plugins (base, good, bad, ugly, x, alsa, libav)
+#   
+# 1. Python 3
+#
+#    License: Python Software Foundation License Version 2
+#    Link: https://docs.python.org/3/license.html
+#
+# 2. python3-netifaces
+#
+#    License: MIT-style license
+#    Link: https://pypi.org/project/netifaces/
+#
+# 3. python3-flask
+#   License: BSD-3-Clause
+#    Link: https://flask.palletsprojects.com/en/stable/license/
+#
+# 4. PipeWire (includes pipewire-audio, pipewire-pulse)
+#
+#    License: MIT License (with some components under LGPL and GPL)
+#    Link: https://github.com/PipeWire/pipewire/blob/master/LICENSE
+# 5. WirePlumber
+#   License: MIT License
+#    Link: https://github.com/PipeWire/wireplumber
+#
+# 6. libspa-0.2-bluetooth
+#
+#    License: Mixed (includes LGPL and other codec-specific licenses)
+#    Link: https://packages.debian.org/bullseye/libs/libspa-0.2-bluetooth 
+#
+#
+# Copyright (C) 2025 Bama Box ltd.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.

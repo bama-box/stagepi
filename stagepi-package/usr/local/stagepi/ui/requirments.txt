@@ -1,0 +1,5 @@
+pyhocon
+flask 
+flask_cors 
+psutil
+libconf
