@@ -14,15 +14,17 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 [Unit]
-Description=StagePI Web GUI
+Description=StagePI API endpoint
 After=network.target
 
 [Service]
+StandardOutput=journal
+StandardError=journal
+Restart=on-failure
 User=pi
-WorkingDirectory=/usr/local/stagepi/ui
-ExecStart=/usr/bin/python3 /usr/local/stagepi/ui/main.py
+WorkingDirectory=/usr/local/stagepi/be/
+ExecStart=/usr/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000
 Restart=always
-Environment=FLASK_ENV=development
 Environment=PYTHONUNBUFFERED=1
 
 [Install]

@@ -9,6 +9,9 @@ Depends: shairport-sync,
  python3-netifaces,
  python3-flask,
  python3-fastapi,
+ python3-psutil,
+ python3-libconf,
+ python3-pydbus,
  pipewire,
  pipewire-audio,
  pipewire-pulse,
@@ -22,7 +25,9 @@ Depends: shairport-sync,
  gstreamer1.0-x,
  gstreamer1.0-alsa,
  gstreamer1.0-libav,
- psutils
+ psutils,
+ dhcpcd5,
+ uvicorn
 Maintainer: Shai Taharlev <stagepi@bama-box.com>
-Description: StagePi — your DIY stagebox for audio routing and control.
+Description: StagePi - your DIY stagebox for audio routing and control.
  Designed for musicians, engineers, and tinkerers.

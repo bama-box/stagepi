@@ -1,14 +1,47 @@
+
 #!/bin/bash
+# Stage Pi: Open source stagebox firmware
+# Copyright (C) 2025 Bama Box ltd.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3 of the License.
+
+# This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+set -e
+
 # Get the short Git hash
 GIT_HASH=$(git rev-parse --short HEAD)
+VERSION="0.1.alpha"
+
+# Prepare version string
+VERSION_STRING="${VERSION}-${GIT_HASH}"
+
+# Update version file
+echo "$VERSION_STRING" > stagepi-package/usr/local/stagepi/version
+
+# Commit the version file update
+git add stagepi-package/usr/local/stagepi/version
+git commit -m "Update version file to ${VERSION_STRING}"
+
+# Set permissions and prepare build directory
 chmod 755 stagepi-package/DEBIAN/postinst
 mkdir -p build
 
 # Define the package name
-PACKAGE_NAME="stagepi_1.0-${GIT_HASH}_arm64.deb"
+PACKAGE_NAME="stagepi_${VERSION_STRING}_arm64.deb"
 
-# Build the package with the Git hash in the name
-dpkg-deb --build stagepi-package build/"$PACKAGE_NAME"
+# Build the package
+dpkg-deb --build stagepi-package "build/${PACKAGE_NAME}"
+
+# Create symlink to latest build
 cd build
-unlink stagepi-latest.deb
-ln -s "$PACKAGE_NAME" stagepi-latest.deb 
+[ -L stagepi-latest.deb ] && unlink stagepi-latest.deb
+ln -s "$PACKAGE_NAME" stagepi-latest.deb

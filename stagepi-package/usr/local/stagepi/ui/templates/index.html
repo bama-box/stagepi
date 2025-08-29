@@ -536,24 +536,49 @@
 
                 <!-- Network Section -->
                 <div id="network-section" class="form-section">
-                    <form class="space-y-8">
+                    <form id="networkConfigForm" class="space-y-8">
                         <div class="form-group flex items-center justify-between">
-                            <label for="ethernetEnabled" class="mb-0">Ethernet Enabled:</label>
+                            <label for="ethernetEnabled" class="mb-0">Ethernet (eth0) Enabled:</label>
                             <label class="toggle-switch">
-                                <input type="checkbox" id="ethernetEnabled" checked>
+                                <input type="checkbox" id="ethernetEnabled">
                                 <span class="slider"></span>
                             </label>
                         </div>
-                        <div class="form-group">
-                            <label for="ipAddress">IP Address (Read-only):</label>
-                            <input type="text" id="ipAddress" name="ipAddress" value="192.168.1.100" readonly class="bg-gray-100 cursor-not-allowed">
-                        </div>
-                        <div class="form-group">
-                            <label for="gateway">Gateway (Read-only):</label>
-                            <input type="text" id="gateway" name="gateway" value="192.168.1.1" readonly class="bg-gray-100 cursor-not-allowed">
+
+                        <div id="ethernetConfigArea" class="space-y-8 hidden">
+                            <div class="form-group">
+                                <label>Mode:</label>
+                                <div class="flex gap-x-6 items-center">
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" name="ethMode" value="dhcp" class="form-radio h-5 w-5 text-blue-600 mr-2"> DHCP
+                                    </label>
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" name="ethMode" value="static" class="form-radio h-5 w-5 text-blue-600 mr-2"> Static
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div id="staticFields" class="space-y-8 hidden">
+                                <div class="form-group">
+                                    <label for="ipAddress">IP Address:</label>
+                                    <input type="text" id="ipAddress" name="ipAddress" placeholder="e.g., 192.168.1.100">
+                                </div>
+                                <div class="form-group">
+                                    <label for="subnetMask">Subnet Mask:</label>
+                                    <input type="text" id="subnetMask" name="subnetMask" placeholder="e.g., 255.255.255.0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="gateway">Gateway:</label>
+                                    <input type="text" id="gateway" name="gateway" placeholder="e.g., 192.168.1.1">
+                                </div>
+                                <div class="form-group">
+                                    <label for="dnsServers">DNS Servers:</label>
+                                    <input type="text" id="dnsServers" name="dnsServers" placeholder="e.g., 8.8.8.8, 1.1.1.1">
+                                </div>
+                            </div>
                         </div>
                         <div class="flex flex-col sm:flex-row justify-center gap-6 mt-8">
-                            <button type="button" class="btn-primary">Apply Network Settings</button>
+                            <button type="button" id="saveNetworkConfigBtn" class="btn-primary">Apply Network Settings</button>
                         </div>
                     </form>
                 </div>
@@ -653,8 +678,11 @@
         // Mock Network/Wi-Fi/Volume/AES67 states (will be fetched from backend)
         let networkConfig = {
             ethernetEnabled: true,
+            mode: 'dhcp',
             ipAddress: "Loading...",
-            gateway: "Loading..."
+            subnetMask: "Loading...",
+            gateway: "Loading...",
+            dnsServers: "Loading..."
         };
         let wifiConfig = {
             wifiEnabled: true,
@@ -712,8 +740,14 @@
 
         // Network elements
         const ethernetEnabledToggle = document.getElementById('ethernetEnabled');
+        const ethernetConfigArea = document.getElementById('ethernetConfigArea');
+        const ethModeRadios = document.querySelectorAll('input[name="ethMode"]');
+        const staticFields = document.getElementById('staticFields');
         const ipAddressInput = document.getElementById('ipAddress');
+        const subnetMaskInput = document.getElementById('subnetMask');
         const gatewayInput = document.getElementById('gateway');
+        const dnsServersInput = document.getElementById('dnsServers');
+        const saveNetworkConfigBtn = document.getElementById('saveNetworkConfigBtn');
 
         // Wi-Fi elements
         const wifiEnabledToggle = document = document.getElementById('wifiEnabled');
@@ -761,11 +795,29 @@
                 console.log(clientsData)
                 renderConnectedClient();
 
-                // You would add fetches for network, wifi, volume, aes67 settings here
-                // For now, load mock data for those if not fetched
+                // Fetch Network config for eth0
+                const networkResponse = await fetch('/api/network/config/eth0');
+                const networkData = await networkResponse.json();
+                networkConfig = networkData;
+
                 ethernetEnabledToggle.checked = networkConfig.ethernetEnabled;
-                ipAddressInput.value = networkConfig.ipAddress;
-                gatewayInput.value = networkConfig.gateway;
+                if (networkConfig.ethernetEnabled) {
+                    ethernetConfigArea.classList.remove('hidden');
+                    const modeRadio = document.querySelector(`input[name="ethMode"][value="${networkConfig.mode}"]`);
+                    if (modeRadio) modeRadio.checked = true;
+
+                    if (networkConfig.mode === 'static') {
+                        staticFields.classList.remove('hidden');
+                        ipAddressInput.value = networkConfig.ipAddress;
+                        subnetMaskInput.value = networkConfig.subnetMask;
+                        gatewayInput.value = networkConfig.gateway;
+                        dnsServersInput.value = Array.isArray(networkConfig.dnsServers) ? networkConfig.dnsServers.join(', ') : (networkConfig.dnsServers || '');
+                    } else {
+                        staticFields.classList.add('hidden');
+                    }
+                }
+
+                // You would add fetches for wifi, volume, aes67 settings here
                 wifiEnabledToggle.checked = wifiConfig.wifiEnabled;
                 ssidInput.value = wifiConfig.ssid;
                 passwordInput.value = wifiConfig.password;
@@ -775,7 +827,7 @@
 
             } catch (error) {
                 console.error("Error fetching initial data:", error);
-                showMessage("Failed to load initial data from backend.", "error");
+                showMessage("Failed to load initial data from backend. Some values may be missing.", "error");
             }
         }
 
@@ -907,6 +959,63 @@
             } catch (error) {
                 console.error('Error saving configuration:', error);
                 showMessage("An error occurred while saving configuration.", "error");
+            }
+        });
+
+        ethernetEnabledToggle.addEventListener('change', () => {
+            if (ethernetEnabledToggle.checked) {
+                ethernetConfigArea.classList.remove('hidden');
+            } else {
+                ethernetConfigArea.classList.add('hidden');
+            }
+        });
+
+        ethModeRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (radio.value === 'static' && radio.checked) {
+                    staticFields.classList.remove('hidden');
+                } else {
+                    staticFields.classList.add('hidden');
+                }
+            });
+        });
+
+        /**
+         * Handles saving the Network configuration via backend API.
+         */
+        saveNetworkConfigBtn.addEventListener('click', async () => {
+            const mode = document.querySelector('input[name="ethMode"]:checked')?.value || 'dhcp';
+
+            const newConfig = {
+                ethernetEnabled: ethernetEnabledToggle.checked,
+                mode: mode,
+                ipAddress: ipAddressInput.value,
+                subnetMask: subnetMaskInput.value,
+                gateway: gatewayInput.value,
+                dnsServers: dnsServersInput.value.split(',')
+                    .map(s => s.trim())
+                    .filter(s => s.length > 0)
+            };
+
+            showMessage("Saving Network configuration...", "info");
+            try {
+                const response = await fetch('/api/network/config/eth0', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(newConfig),
+                });
+                const data = await response.json();
+                if (data.success) {
+                    networkConfig = newConfig; // Update local state on success
+                    showMessage(data.message, "success");
+                } else {
+                    showMessage(`Failed to save config: ${data.message || 'Unknown error'}`, "error");
+                }
+            } catch (error) {
+                console.error('Error saving network configuration:', error);
+                showMessage("An error occurred while saving network configuration.", "error");
             }
         });
 

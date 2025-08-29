@@ -1,3 +1,4 @@
+#!/bin/bash -e
 # Stage Pi: Open source stagebox firmware
 # Copyright (C) 2025 Bama Box ltd.
 #
@@ -13,17 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-[Unit]
-Description=StagePI Web GUI
-After=network.target
+# Copy the package from the host to a temporary location
+cp files/stagepi-latest.deb ${ROOTFS_DIR}/tmp/
 
-[Service]
-User=pi
-WorkingDirectory=/usr/local/stagepi/ui
-ExecStart=/usr/bin/python3 /usr/local/stagepi/ui/main.py
-Restart=always
-Environment=FLASK_ENV=development
-Environment=PYTHONUNBUFFERED=1
+on_chroot << EOF
+	apt install /tmp/stagepi-latest.deb -f -y
+	apt install -f -y
+	rm /tmp/stagepi-latest.deb
+EOF
 
-[Install]
-WantedBy=multi-user.target
+

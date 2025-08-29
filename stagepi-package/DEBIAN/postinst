@@ -38,16 +38,18 @@ install -m 644 "$SOURCE_DIR/etc/shairport-sync.conf" /etc/
 install -d /etc/systemd/system
 install -m 644 "$SOURCE_DIR/etc/systemd/system/stagepi-ble.service" /etc/systemd/system/
 install -m 644 "$SOURCE_DIR/etc/systemd/system/stagepi-ui.service" /etc/systemd/system/
+install -m 644 "$SOURCE_DIR/etc/systemd/system/stagepi-api.service" /etc/systemd/system/
 install -m 644 "$SOURCE_DIR/etc/systemd/system/ptp4l.service" /etc/systemd/system/
 
 # Enable services
 systemctl enable shairport-sync || true
 systemctl enable bluetooth || true
+systemctl enable stagepi-api.service || true
 systemctl enable stagepi-ui.service || true
 systemctl enable stagepi-ble.service || true
 systemctl enable ptp4l.service || true
 
 # Reconfigure locales
-dpkg-reconfigure locales || true
+#dpkg-reconfigure locales || true
 
 exit 0
