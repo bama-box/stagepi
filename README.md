@@ -46,7 +46,7 @@ Traditional stage boxes can be bulky and expensive. Stage Pi leverages the compa
 
 - A Raspberry Pi (Raspberry Pi 4 recommended)
 - A suitable power supply
-- An SD card (16GB or larger recommended)
+- An SD card (4GB or larger recommended)
 - A compatible HiFiBerry HAT
 - Ethernet cable
 
