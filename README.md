@@ -1,3 +1,5 @@
+Welcome to the stagepi wiki!
+# StagePi
 
 # Stage Pi: Digital Stage Box Using Raspberry Pi
 
@@ -50,9 +52,25 @@ Traditional stage boxes can be bulky and expensive. Stage Pi leverages the compa
 - A compatible HiFiBerry HAT
 - Ethernet cable
 
-### Installation
+## Download & Install
 
-**Flash Raspberry Pi OS**: *Instructions TBD*
+### 1. Get the Image
+Download the latest StagePi image
+
+### 2. Burn with Raspberry Pi Imager
+- Download [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
+- Insert microSD card
+- Open Imager → **Choose OS** → **Use custom** → Select StagePi image
+- Choose your SD card → Click **Write**
+- Eject card and insert into Raspberry Pi
+
+## First Boot
+
+1. **Power on your Raspberry Pi.**
+2. A default Wi-Fi hotspot will appear: `stagepi-[hostname]`
+3. Connect to the hotspot from your computer or mobile device.
+4. Open a browser and go to `http://[hostname].local:5001` or use the Pi’s IP address.
+5. Follow the setup instructions in the web interface.
 
 > Detailed instructions on configuring audio routing, connecting to a mixer, and controlling the stage box will be added as the project develops.
 
@@ -77,4 +95,3 @@ Any derivative works or modifications you distribute must also be licensed under
 - The **Raspberry Pi Foundation** for creating such a versatile single-board computer
 - The **open-source audio community** (ALSA, JACK, PipeWire) for their invaluable tools
 - **HiFiBerry** for providing high-quality audio HATs for the Raspberry Pi
-
