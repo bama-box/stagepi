@@ -1,0 +1,11 @@
+[Unit]
+Description=Run script on first boot
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/first-boot.sh
+Type=oneshot
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

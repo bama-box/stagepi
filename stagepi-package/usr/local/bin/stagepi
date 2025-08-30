@@ -1,0 +1,71 @@
+#!/bin/bash
+# Stage Pi: Open source stagebox firmware
+# Copyright (C) 2025 Bama Box ltd.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3 of the License.
+
+# This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+case "$1" in
+  status)
+    curl -s http://localhost:8000/system/status  | jq .
+    ;;
+  resources)
+    curl -s -X 'GET' \
+  'http://localhost:8000/system/resources' \
+  -H 'accept: application/json' | jq .
+    ;;
+  wifi)
+    curl -s -X 'GET' \
+  'http://localhost:8000/network/config/wifi' \
+  -H 'accept: application/json' | jq .
+    ;;
+   scan)
+   curl -s -X 'GET' \
+  'http://localhost:8000/network/wifi/available' \
+  -H 'accept: application/json' | jq .
+   ;;
+   wifi_client)  
+   # Validate that SSID and password are provided
+   if [ -z "$2" ] || [ -z "$3" ]; then
+     echo "Usage: wifi_client <unused> <SSID> <Password>"
+   else
+   curl -s -X PUT \
+    'http://localhost:8000/network/config/wifi' \
+    -H 'accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d "{
+      \"deviceMode\": \"client\",
+      \"clientConfig\": {
+        \"ssid\": \"$2\",
+        \"password\": \"$3\"
+      }
+    }" | jq .
+    fi
+  ;;
+  wifi_ap)
+  SSID="Stagepi-$(hostname)"
+  curl -s -X PUT \
+  'http://localhost:8000/network/config/wifi' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d "{
+  \"deviceMode\": \"ap\",
+  \"apConfig\": {
+    \"ssid\": \"$SSID\",
+    \"password\": \"stage314\",
+    \"channel\": 11
+  }
+  }" | jq . 
+;;
+  *)
+    echo "Usage: $0 {status|resources|wifi|scan|wifi_client|wifi_ap}"
+    ;;
+esac

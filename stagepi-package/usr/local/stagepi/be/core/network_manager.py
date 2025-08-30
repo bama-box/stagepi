@@ -16,7 +16,7 @@ logging.basicConfig(
 def _run_nmcli_command(command: list) -> str:
     """A helper to run nmcli commands, log them, and handle errors."""
     try:
-        base_command = ["nmcli", "-t"]
+        base_command = ["sudo","nmcli", "-t"]
         full_command = base_command + command
         
         # ADDED: Log the command before executing it
@@ -138,8 +138,26 @@ def get_wifi_config():
     # We assume client mode if there's a standard connection. AP mode detection is more complex.
     return {"deviceMode": "client", "clientConfig": info, "apConfig": None}
 
+def _delete_wlan0():
+    try:
+        _run_nmcli_command(["device", "disconnect", "wlan0"])
+    except RuntimeError as e:
+        logging.warning(f"Could not disconnect wlan0 (might be already down): {e}")
+    try:
+        _run_nmcli_command(["con", "delete", "wlan0"])
+    except RuntimeError as e:
+        logging.warning(f"Could not delete wlan0 (might be already gone): {e}")
+
 def set_wifi_config(config):
     """Configures the Wi-Fi interface for client or AP mode."""
+    # First, validate the requested mode to avoid disconnecting for no reason if the mode is invalid.
+    if config.deviceMode not in ("client", "ap"):
+        raise ValueError("Invalid deviceMode specified.")
+
+    # Before setting a new mode (client or AP), disconnect the wlan0 device
+    # to ensure a clean state. This is especially important when switching
+    # between modes. The underlying connection profile is not deleted here,
+    # just deactivated. nmcli will handle creating/reusing profiles.
     try:
         _run_nmcli_command(["device", "disconnect", "wlan0"])
     except RuntimeError as e:
@@ -147,13 +165,20 @@ def set_wifi_config(config):
 
     if config.deviceMode == "client":
         client_config = config.clientConfig
-        _run_nmcli_command(["device", "wifi", "connect", client_config.ssid, "password", client_config.password, "ifname", "wlan0"])
+        try:
+            _run_nmcli_command(["connection", "down", "stagepi-ap"])
+        except RuntimeError as e:
+            logging.warning(f"Could not disconnect AP (might be already down): {e}")
+        _delete_wlan0()
+        # add the device
+        _run_nmcli_command(["con", "add", "type", "wifi", "con-name", "wlan0", "ifname", "wlan0", "ssid", client_config.ssid, "wifi-sec.key-mgmt", "wpa-psk", "wifi-sec.psk", client_config.password])
+        _run_nmcli_command(["connection", "modify", "wlan0", "connection.autoconnect", "yes" ])
+        _run_nmcli_command(["connection", "up", "wlan0"])
     elif config.deviceMode == "ap":
         ap_config = config.apConfig
+        _delete_wlan0()
         _run_nmcli_command(["device", "wifi", "hotspot", "ifname", "wlan0", "ssid", ap_config.ssid, "password", ap_config.password])
-    else:
-        raise ValueError("Invalid deviceMode specified.")
-    
+
     return get_wifi_config()
 
 def reset_wifi_config():

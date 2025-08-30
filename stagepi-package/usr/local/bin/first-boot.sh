@@ -14,22 +14,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-set -e
+echo "Running first boot tasks..." >> /var/log/first-boot.log
+# set hostname as mac address of eth0
+# Get MAC address of eth0
+mac=$(cat /sys/class/net/eth0/address)
+# Remove colons
+hostname=$(echo "$mac" | tr -d ':')
+# Set the hostname
+hostnamectl set-hostname "$hostname"
+sed -i "s/127.0.1.1.*/127.0.1.1 $hostname/" /etc/hosts
 
-TARGET="${TARGET:-$1}"
+# need to restart for the new name get advertised
+sudo systemctl restart avahi-daemon.service 
 
-if [ -z "$TARGET" ]; then
-  echo "Usage: TARGET=<target-host> $0 OR $0 <target-host>"
-  exit 1
-fi
+sudo nmcli connection delete wlan0
+sudo nmcli connection delete Hotspot
+sudo nmcli -t device wifi hotspot ifname wlan0 ssid Stagepi-$(hostname) password stage314
 
-scripts/build.sh
-
-echo "copy latest to target $TARGET"
-scp build/stagepi-latest.deb pi@"$TARGET":/tmp
-
-echo "removing old stagepi"
-ssh pi@"$TARGET" sudo apt remove stagepi -y
-
-echo "installing new stagepi"
-ssh pi@"$TARGET" sudo apt install /tmp/stagepi-latest.deb -y
+#systemctl disable first-boot.service
