@@ -14,9 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-ADDR=$1
-PORT=$2
-# defualt values
-#ADDR=239.69.22.10
-#PORT=5004
-GST_DEBUG=alsasink:4,rtpjitterbuffer:4 gst-launch-1.0 -v   udpsrc address=$ADDR port=$PORT buffer-size=2097152 multicast-iface=wlan0 caps="application/x-rtp, media=audio, encoding-name=L16, payload=96, clock-rate=48000, channels=2" !   rtpjitterbuffer latency=10 drop-on-latency=true do-lost=true ! rtpL16depay ! audioconvert !  alsasink device=hw:sndrpihifiberry sync=false buffer-time=50000 latency-time=10000
+ADDR=${1:-"239.69.22.10"}
+PORT=${2:-"5004"}
+HW_DEVICE=${3:-"hw:sndrpihifiberry"}
+NET_DEVICE=${4:"wlan0"}
+
+GST_DEBUG=alsasink:4,rtpjitterbuffer:4 gst-launch-1.0 -v   udpsrc address=$ADDR port=$PORT buffer-size=2097152 multicast-iface=$NET_DEVICE caps="application/x-rtp, media=audio, encoding-name=L16, payload=96, clock-rate=48000, channels=2" !   rtpjitterbuffer latency=10 drop-on-latency=true do-lost=true ! rtpL16depay ! audioconvert !  alsasink device=$HW_DEVICE sync=false buffer-time=50000 latency-time=10000

@@ -47,9 +47,8 @@ def get_status():
         print(f"Version file not found at: {VERSION_FILE_PATH}")
     except Exception as e:
         print(f"Error reading version file: {e}")
-
     return {
-        "deviceId": mac_address,
+        "deviceId": mac_address.replace(':', ''),
         "hostname": hostname,
         "status": "configured",
         "ipAddress": ip_address,

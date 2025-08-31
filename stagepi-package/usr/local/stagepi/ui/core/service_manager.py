@@ -1,0 +1,172 @@
+# core/service_manager.py
+import subprocess
+import logging
+
+# This dictionary maps our friendly service names to their systemd service names and descriptions.
+# NOTE: The 'service_name' values are assumptions. You may need to adjust them
+# to match the actual service file names on your system.
+_services_config = {
+    "bluetooth": {
+        "description": "Manages the Bluetooth radio.",
+        "service_name": "bluetooth.service",
+        "config_path": "/usr/local/stagepi/etc/bluetooth.env" },
+    "a2dp": {
+        "description": "Enables high-quality audio streaming (A2DP Sink).",
+        "service_name": "btaudio.service",
+        "config_path": "/usr/local/stagepi/etc/a2dp.env"},
+    "airplay": {
+        "description": "Enables the AirPlay audio streaming service.",
+        "service_name": "shairport-sync.service",
+        "config_path": "/usr/local/stagepi/etc/airplay.env"},
+    "aes67": {
+        "description": "Enables AES67 audio over IP streaming.",
+        "service_name": "stagepi-aes67.service",
+        "config_path": "/usr/local/stagepi/etc/aes67.env"},
+}
+
+# A mock for systems without systemd, providing a fallback state.
+_services_mock_state = {
+    "bluetooth.service": {"enabled": True, "active": True},
+    "btaudio.service": {"enabled": True, "active": True},
+    "shairport-sync.service": {"enabled": False, "active": False},
+    "aes67.service": {"enabled": False, "active": False},
+}
+
+logger = logging.getLogger(__name__)
+
+def _run_systemctl(args):
+    """Helper to run a systemctl command and handle errors."""
+    try:
+        command = ["sudo", "systemctl"] + args
+        proc = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if "does not exist" in proc.stderr:
+             logger.warning(f"Service not found for command: {' '.join(command)}")
+             return None
+        return proc
+    except FileNotFoundError:
+        logger.warning("'systemctl' command not found. Using mock data.")
+        return None
+
+def _get_service_state(service_name: str):
+    """Gets the enabled and active state of a systemd service."""
+    proc_enabled = _run_systemctl(["is-enabled", service_name])
+    proc_active = _run_systemctl(["is-active", service_name])
+
+    if proc_enabled is None or proc_active is None:
+        logger.warning(f"Falling back to mock state for {service_name}")
+        return _services_mock_state.get(service_name, {"enabled": False, "active": False})
+
+    # `is-enabled` has an exit code of 0 if enabled.
+    enabled = proc_enabled.returncode == 0
+    # `is-active` has an exit code of 0 if active.
+    active = proc_active.returncode == 0
+
+    return {"enabled": enabled, "active": active}
+
+
+def get_all_services():
+    logger.info("CORE: Getting all services...")
+    services_with_status = []
+    for name, service_config in _services_config.items():
+        state = _get_service_state(service_config["service_name"])
+        config = _get_service_config(name)
+        services_with_status.append({
+            "name": name,
+            "description": service_config["description"],
+            "config": config,
+            **state
+        })
+    return services_with_status
+
+def get_service_by_name(name: str):
+    logger.info(f"CORE: Getting service '{name}'...")
+    if name in _services_config:
+        service_config = _services_config[name]
+        state = _get_service_state(service_config["service_name"])
+        config = _get_service_config(name)
+        return {
+            "name": name,
+            "description": service_config["description"],
+            "config": config,
+            **state
+        }
+    return None
+
+def _get_service_config_aes67():
+    config_path = _services_config["aes67"]["config_path"]
+    config = {}
+    try:
+        with open(config_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and '=' in line:
+                    key, value = line.split('=', 1)
+                    config[key.strip().lower()] = value.strip().replace('"', '')
+    except FileNotFoundError:
+        logger.warning(f"Config file not found at {config_path}.")
+    return config
+
+
+def __update_service_config_aes67(update_data: dict):
+    config_path = _services_config["aes67"]["config_path"]
+    config = {}
+    try:
+        with open(config_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and '=' in line:
+                    key, value = line.split('=', 1)
+                    config[key.strip()] = value.strip()
+    except FileNotFoundError:
+        logger.warning(f"Config file not found at {config_path}. A new one will be created.")
+
+    for key, value in update_data.items():
+        if key != "enabled":
+            config[key.upper()] = str(value)
+
+    with open(config_path, 'w') as f:
+        for key, value in config.items():
+            f.write(f"{key}={value}\n")
+
+
+def _get_service_config(name: str):
+    if name == "aes67":
+        return _get_service_config_aes67()
+    return {}
+
+
+def __update_service_config(name: str, update_data: dict):
+    if name == "aes67":
+        __update_service_config_aes67(update_data)
+
+def update_service(name: str, update_data: dict):
+    logger.info(f"CORE: Updating service '{name}' with data: {update_data}")
+    if name not in _services_config:
+        return None
+
+    service_name = _services_config[name]["service_name"]
+
+    if "enabled" in update_data:
+        enabled = update_data["enabled"]
+        logger.info(f"CORE: Setting service '{name}' ({service_name}) to enabled={enabled}...")
+        action = "enable" if enabled else "disable"
+        __update_service_config(name, update_data)
+
+        # Use --now to also start/stop the service immediately
+        command_args = [action, "--now", service_name]
+        proc = _run_systemctl(command_args)
+
+        if proc is None:
+            logger.warning(f"Falling back to mock update for {service_name}")
+            _services_mock_state[service_name]["enabled"] = enabled
+            _services_mock_state[service_name]["active"] = enabled # Mocking start/stop
+        elif proc.returncode != 0:
+            logger.error(f"Failed to run 'systemctl {' '.join(command_args)}': {proc.stderr.strip()}")
+
+    # After updating, return the new state of the service.
+    return get_service_by_name(name)

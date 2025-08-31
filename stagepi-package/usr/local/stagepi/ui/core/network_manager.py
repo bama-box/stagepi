@@ -43,6 +43,25 @@ def _run_nmcli_command(command: list) -> str:
         logging.error(f"An unexpected error occurred: {e}")
         raise RuntimeError("An unexpected error occurred while running a system command.")
 
+def _get_connection_name_for_device(device: str) -> str:
+    """Finds the connection name for a given device (e.g., 'eth0')."""
+    try:
+        # This is the most reliable way to get the connection associated with a device
+        dev_output = _run_nmcli_command(["-t", "-f", "GENERAL.CONNECTION", "device", "show", device])
+        conn_name = dev_output.split(':', 1)[1].strip()
+        if conn_name and conn_name != '--':
+            return conn_name
+        else:
+            # If no connection is associated, try finding one targeting the device
+            conn_output = _run_nmcli_command(["-t", "-f", "NAME,DEVICE", "connection", "show"])
+            for line in conn_output.splitlines():
+                if line.endswith(f":{device}"):
+                    return line.split(':', 1)[0].strip()
+            raise RuntimeError(f"No connection profile found for {device}.")
+    except (RuntimeError, IndexError):
+        raise RuntimeError(f"Could not find a connection profile for {device}.")
+
+
 def _get_ip_info(interface: str):
     """Gets detailed IP and connection info for a specific interface."""
     try:
@@ -93,10 +112,10 @@ def get_ethernet_config():
 
 def set_ethernet_config(config):
     """Sets a static IP configuration for the 'eth0' interface."""
-    info = _get_ip_info('eth0')
-    if not info or not info.get('connected'):
-        return {"error": "Ethernet is not connected. Cannot set static IP."}
-    conn_name = info['ssid']
+    try:
+        conn_name = _get_connection_name_for_device('eth0')
+    except RuntimeError as e:
+        return {"error": str(e)}
 
     # Convert subnet mask (e.g., 255.255.255.0) to CIDR prefix (e.g., 24)
     prefix = sum(bin(int(x)).count('1') for x in config.subnetMask.split('.'))
@@ -107,24 +126,38 @@ def set_ethernet_config(config):
         "ipv4.method", "manual",
         "ipv4.addresses", f"{config.ipAddress}/{prefix}",
         "ipv4.gateway", config.gateway,
-        "ipv4.dns", ",".join(config.dnsServers)
+        "ipv4.dns", ",".join(config.dnsServers or [])
     ]
     _run_nmcli_command(mod_command)
 
     # Re-apply the connection to make changes take effect
-    _run_nmcli_command(["connection", "up", conn_name])
+    try:
+        _run_nmcli_command(["connection", "up", conn_name])
+    except RuntimeError as e:
+        logging.warning(f"Could not bring up connection '{conn_name}', but configuration was saved. Error: {e}")
     
     return get_ethernet_config()
 
 def reset_ethernet_config():
     """Resets the Ethernet configuration to DHCP (auto)."""
-    info = _get_ip_info('eth0')
-    if not info or not info.get('connected'):
-        return {"error": "Ethernet is not connected. Cannot reset."}
+    try:
+        conn_name = _get_connection_name_for_device('eth0')
+    except RuntimeError as e:
+        return {"error": str(e)}
     
-    conn_name = info['ssid']
-    _run_nmcli_command(["connection", "modify", conn_name, "ipv4.method", "auto"])
-    _run_nmcli_command(["connection", "up", conn_name])
+    mod_command = [
+        "connection", "modify", conn_name, 
+        "ipv4.method", "auto",
+        "ipv4.addresses", "",
+        "ipv4.dns", ""
+    ]
+    _run_nmcli_command(mod_command)
+
+    try:
+        _run_nmcli_command(["connection", "up", conn_name])
+    except RuntimeError as e:
+        logging.warning(f"Could not bring up connection '{conn_name}', but configuration was saved. Error: {e}")
+
     return get_ethernet_config()
 
 # --- Wi-Fi Functions ---

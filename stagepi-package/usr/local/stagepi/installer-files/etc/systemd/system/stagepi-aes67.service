@@ -14,18 +14,11 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 [Unit]
-Description=StagePI API endpoint
-After=network.target
+Description=Start AES67 service
 
 [Service]
-StandardOutput=journal
-StandardError=journal
-Restart=on-failure
-User=pi
-WorkingDirectory=/usr/local/stagepi/be/
-ExecStart=/usr/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000
+ExecStart=/usr/local/bin/start-aes67.sh
 Restart=always
-Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=multi-user.target

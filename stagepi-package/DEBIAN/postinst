@@ -21,12 +21,6 @@ echo "Post-install script running..."
 # Source directory inside the package
 SOURCE_DIR="/usr/local/stagepi/installer-files"
 
-# Install AES scripts
-install -m 755 "$SOURCE_DIR/scripts/AES67-3ms-eth-rx" /usr/local/bin/
-install -m 755 "$SOURCE_DIR/scripts/AES67-10ms-wifi-rx" /usr/local/bin/
-install -m 755 "$SOURCE_DIR/scripts/stream-eth.sh" /usr/local/bin/
-install -m 755 "$SOURCE_DIR/scripts/stream-wifi.sh" /usr/local/bin/
-
 # Copy configuration files and directories to /etc
 install -d /etc/linuxptp
 install -m 644 "$SOURCE_DIR/etc/linuxptp/ptp4l.conf" /etc/linuxptp/
@@ -38,20 +32,26 @@ install -m 644 "$SOURCE_DIR/etc/shairport-sync.conf" /etc/
 install -d /etc/systemd/system
 install -m 644 "$SOURCE_DIR/etc/systemd/system/stagepi-ble.service" /etc/systemd/system/
 install -m 644 "$SOURCE_DIR/etc/systemd/system/stagepi-ui.service" /etc/systemd/system/
-install -m 644 "$SOURCE_DIR/etc/systemd/system/stagepi-api.service" /etc/systemd/system/
 install -m 644 "$SOURCE_DIR/etc/systemd/system/ptp4l.service" /etc/systemd/system/
 install -m 644 "$SOURCE_DIR/etc/systemd/system/first-boot.service" /etc/systemd/system/
+install -m 644 "$SOURCE_DIR/etc/systemd/system/stagepi-aes67.service" /etc/systemd/system/
 
 # Enable services
 systemctl enable shairport-sync || true
 systemctl enable bluetooth || true
-systemctl enable stagepi-api.service || true
 systemctl enable stagepi-ui.service || true
 systemctl enable stagepi-ble.service || true
 systemctl enable ptp4l.service || true
 systemctl enable first-boot.service || true
 
+# restart services
+systemctl restart shairport-sync || true
+systemctl restart bluetooth || true
+systemctl restart stagepi-ui.service || true
+systemctl restart stagepi-ble.service || true
+systemctl restart ptp4l.service || true
+
 # Reconfigure locales
-#dpkg-reconfigure locales || true
+dpkg-reconfigure locales || true
 
 exit 0

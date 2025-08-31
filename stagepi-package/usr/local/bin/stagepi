@@ -63,9 +63,29 @@ case "$1" in
     \"password\": \"stage314\",
     \"channel\": 11
   }
-  }" | jq . 
-;;
+  }" | jq .
+  ;;
+  start_aes67)
+  curl -s -X 'PATCH' \
+  'http://localhost:8000/services/aes67' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d "{
+  \"enabled\": true,
+  \"net_device\": \"$2\",
+  \"hw_device\": \"$3\"
+  }" | jq .
+  ;;
+  stop_aes67)
+  curl -s -X 'PATCH' \
+  'http://localhost:8000/services/aes67' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d "{
+  \"enabled\": false
+  }" | jq .
+  ;;
   *)
-    echo "Usage: $0 {status|resources|wifi|scan|wifi_client|wifi_ap}"
+    echo "Usage: $0 {status|resources|wifi|scan|wifi_client|wifi_ap|start_aes67|stop_aes67}"
     ;;
 esac

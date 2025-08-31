@@ -24,6 +24,9 @@ VERSION="0.1.alpha"
 # Prepare version string
 VERSION_STRING="${VERSION}-${GIT_HASH}"
 
+# Bump the package minor version
+sed -E -i 's/(Version: [0-9]+\.)([0-9]+)(\.[0-9]+)/echo "\1$((\2+1))\3"/ge' stagepi-package/DEBIAN/control
+
 # Update version file
 echo "$VERSION_STRING" > stagepi-package/usr/local/stagepi/version
 
