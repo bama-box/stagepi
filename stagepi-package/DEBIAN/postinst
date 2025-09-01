@@ -52,6 +52,6 @@ systemctl restart stagepi-ble.service || true
 systemctl restart ptp4l.service || true
 
 # Reconfigure locales
-dpkg-reconfigure locales || true
+#dpkg-reconfigure locales || true
 
 exit 0

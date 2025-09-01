@@ -82,13 +82,17 @@ def _get_ip_info(interface: str):
         conn_name = dev_data.get('GENERAL.CONNECTION')
         if not conn_name:
             return {"connected": False} # No active connection profile
-            
+
+        ssid = dev_data.get('AP[1].SSID')
+
         method_output = _run_nmcli_command(["-f", "ipv4.method", "connection", "show", conn_name])
         method = method_output.split(':')[1] if ':' in method_output else 'unknown'
 
         return {
             "connected": True,
-            "ssid": conn_name,
+            "device": interface,
+            "ssid": ssid,
+            "connection": conn_name,
             "mode": method,
             "ipAddress": ip_data[0],
             "subnetMask": subnet_mask,
@@ -167,9 +171,12 @@ def get_wifi_config():
     info = _get_ip_info('wlan0')
     if not info.get("connected"):
         return {"deviceMode": "client", "clientConfig": {"connected": False, "ssid": None}, "apConfig": None}
-    
-    # We assume client mode if there's a standard connection. AP mode detection is more complex.
-    return {"deviceMode": "client", "clientConfig": info, "apConfig": None}
+    if "Hotspot" in info.get("connection"):
+        deviceMode = "ap"
+    else:
+        deviceMode = "client"
+
+    return {"deviceMode": deviceMode, "clientConfig": info, "apConfig": info}
 
 def _delete_wlan0():
     try:
@@ -183,10 +190,6 @@ def _delete_wlan0():
 
 def set_wifi_config(config):
     """Configures the Wi-Fi interface for client or AP mode."""
-    # First, validate the requested mode to avoid disconnecting for no reason if the mode is invalid.
-    if config.deviceMode not in ("client", "ap"):
-        raise ValueError("Invalid deviceMode specified.")
-
     # Before setting a new mode (client or AP), disconnect the wlan0 device
     # to ensure a clean state. This is especially important when switching
     # between modes. The underlying connection profile is not deleted here,
@@ -196,21 +199,31 @@ def set_wifi_config(config):
     except RuntimeError as e:
         logging.warning(f"Could not disconnect wlan0 (might be already down): {e}")
 
-    if config.deviceMode == "client":
-        client_config = config.clientConfig
+    if config.mode == "client":
         try:
             _run_nmcli_command(["connection", "down", "stagepi-ap"])
         except RuntimeError as e:
             logging.warning(f"Could not disconnect AP (might be already down): {e}")
-        _delete_wlan0()
+        try:
+            _delete_wlan0()
+        except RuntimeError as e:
+            logging.warning(f"Could not delete wlan0 (might be already deleted): {e}")
         # add the device
-        _run_nmcli_command(["con", "add", "type", "wifi", "con-name", "wlan0", "ifname", "wlan0", "ssid", client_config.ssid, "wifi-sec.key-mgmt", "wpa-psk", "wifi-sec.psk", client_config.password])
-        _run_nmcli_command(["connection", "modify", "wlan0", "connection.autoconnect", "yes" ])
-        _run_nmcli_command(["connection", "up", "wlan0"])
-    elif config.deviceMode == "ap":
-        ap_config = config.apConfig
-        _delete_wlan0()
-        _run_nmcli_command(["device", "wifi", "hotspot", "ifname", "wlan0", "ssid", ap_config.ssid, "password", ap_config.password])
+        try:
+            _run_nmcli_command(["con", "add", "type", "wifi", "con-name", "wlan0", "ifname", "wlan0", "ssid", config.ssid, "wifi-sec.key-mgmt", "wpa-psk", "wifi-sec.psk", config.password])
+            _run_nmcli_command(["connection", "modify", "wlan0", "connection.autoconnect", "yes" ])
+            _run_nmcli_command(["connection", "up", "wlan0"])
+        except RuntimeError as e:
+            logging.warning(f"Failed configuring wlan0: {e}")
+            return {"error": str(e)}
+
+    elif config.mode == "hotspot":
+        try:
+            _delete_wlan0()
+            _run_nmcli_command(["device", "wifi", "hotspot", "ifname", "wlan0", "ssid", config.ssid, "password", config.password])
+        except RuntimeError as e:
+            logging.warning(f"Could not setup Hotspot: {e}")
+            return {"error": str(e)}
 
     return get_wifi_config()
 
