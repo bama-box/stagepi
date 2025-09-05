@@ -16,6 +16,7 @@ class EthernetStaticConfig(BaseModel):
     dnsServers: Optional[List[str]] = None
 
 class WifiConfig(BaseModel):
+    region: str = Field(..., min_length=2, max_length=2, description="2-letter country code for the Wi-Fi region.")
     mode: str = Field(default="client")
     ssid: str
     password: str
@@ -54,11 +55,6 @@ async def set_wifi_config(config: WifiConfig):
     result = network_manager.set_wifi_config(config)
     if "error" in result:
         raise HTTPException(status_code=409, detail=result["error"])
-
-
-@router.delete("/config/wifi")
-async def delete_wifi_config():
-    return network_manager.reset_wifi_config()
 
 @router.get("/wifi/available")
 async def get_available_wifi_networks():

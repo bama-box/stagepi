@@ -1,5 +1,5 @@
 Package: stagepi
-Version: 1.38.1
+Version: 1.40.1
 Section: sound
 Priority: optional
 Architecture: all
@@ -29,6 +29,7 @@ Depends: shairport-sync,
  gstreamer1.0-x,
  gstreamer1.0-alsa,
  gstreamer1.0-libav,
+ pulseaudio-utils,
  psutils,
  dhcpcd5,
  uvicorn,

@@ -15,6 +15,10 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 echo "Running first boot tasks..." >> /var/log/first-boot.log
+# enable SSH
+sudo raspi-config nonint do_ssh 0
+# make sure we are not blocked by rfkill
+sudo raspi-config nonint do_wifi_country IL
 # set hostname as mac address of eth0
 # Get MAC address of eth0
 mac=$(cat /sys/class/net/eth0/address)

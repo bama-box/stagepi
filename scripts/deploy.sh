@@ -28,8 +28,5 @@ scripts/build.sh
 echo "copy latest to target $TARGET"
 scp build/stagepi-latest.deb pi@"$TARGET":/tmp
 
-echo "removing old stagepi"
-ssh pi@"$TARGET" sudo apt remove stagepi -y
-
 echo "installing new stagepi"
-ssh pi@"$TARGET" sudo apt install /tmp/stagepi-latest.deb -y
+ssh pi@"$TARGET" sudo apt install --upgrade /tmp/stagepi-latest.deb -y

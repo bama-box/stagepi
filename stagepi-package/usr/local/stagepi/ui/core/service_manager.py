@@ -1,6 +1,9 @@
 # core/service_manager.py
 import subprocess
 import logging
+import libconf
+import tempfile
+import os
 
 # This dictionary maps our friendly service names to their systemd service names and descriptions.
 # NOTE: The 'service_name' values are assumptions. You may need to adjust them
@@ -17,7 +20,7 @@ _services_config = {
     "airplay": {
         "description": "Enables the AirPlay audio streaming service.",
         "service_name": "shairport-sync.service",
-        "config_path": "/usr/local/stagepi/etc/airplay.env"},
+        "config_path": "/etc/shairport-sync.conf"},
     "aes67": {
         "description": "Enables AES67 audio over IP streaming.",
         "service_name": "stagepi-aes67.service",
@@ -133,16 +136,128 @@ def __update_service_config_aes67(update_data: dict):
         for key, value in config.items():
             f.write(f"{key}={value}\n")
 
+def _read_shairport_config():
+    """Reads shairport-sync configuration from a file."""
+    config_path = _services_config["airplay"]["config_path"]
+    config = None
+    try:
+        with open(config_path, 'r') as f:
+            config = libconf.load(f)
+    except Exception as e:
+        print(f"Error reading or parsing config file: {e}")
+    return config
+
+'''
+def _write_shairport_config(config):
+    """Writes shairport-sync configuration to a file."""
+    config_path = _services_config["airplay"]["config_path"]
+    try:
+        with open(config_path, 'w') as f:
+            libconf.dump(config, f)
+    except Exception as e:
+        print(f"Error writing config file: {e}")
+'''
+
+def _write_shairport_config(config):
+    """
+    Writes config to a temporary file as a normal user, then uses
+    a subprocess with 'sudo mv' to move it to the final destination.
+    """
+    config_path = _services_config["airplay"]["config_path"]
+    temp_path = None  # Initialize temp_path to ensure it's available in finally
+
+    try:
+        # 1. Create a temporary file in a location we have permission to write to.
+        # 'delete=False' is crucial because we need to close it before moving.
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8', suffix=".conf") as temp_f:
+            temp_path = temp_f.name
+            libconf.dump(config, temp_f)
+
+        print(f"Temporary configuration written to {temp_path}")
+
+        # 2. Use a subprocess to call 'sudo mv'. This will prompt for a password
+        #    in the terminal if one is required.
+        print(f"Attempting to move file to {config_path} using sudo...")
+        command = ["sudo", "mv", temp_path, config_path]
+
+        # We use check=True to automatically raise an exception if the command fails.
+        subprocess.run(command, check=True, capture_output=True, text=True)
+
+        # 3. (Optional but good practice) Set correct ownership and permissions.
+        subprocess.run(["sudo", "chown", "root:root", config_path], check=True)
+        subprocess.run(["sudo", "chmod", "644", config_path], check=True)
+
+        print(f"Successfully moved and secured the configuration at {config_path}")
+
+    except FileNotFoundError:
+        print("Error: 'sudo' command not found. Is it installed and in your PATH?")
+    except subprocess.CalledProcessError as e:
+        print(f"Error during the sudo operation. The command failed.")
+        print(f"Return Code: {e.returncode}")
+        # stderr often contains the specific error message (e.g., "Permission denied")
+        print(f"Error Output (stderr):\n{e.stderr.strip()}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+    finally:
+        # 4. Clean up the temporary file if it still exists.
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
+            print(f"Cleaned up temporary file: {temp_path}")
+
+
+
+def _filter_airplay_config(config):
+    filtered_config = {
+        "adv_name" : config['general']['name'],
+        "hw_device" : config['alsa']['output_device']
+    }
+    return filtered_config
+
+def _update_default_audio(value):
+    config = _read_shairport_config()
+    # set default audio output
+    config.setdefault('stagepi', {})
+    hw_device = config.get('stagepi', {}).get('output_device', "")
+    if hw_device == "Headphones":
+        subprocess.run(["sudo", "raspi-config", "nonint", "do_audio", "1"], check=True)
+    if "hdmi" in hw_device.lower():
+        subprocess.run(["sudo", "raspi-config", "nonint", "do_audio", "2"], check=True)
+
+def _update_shairport_config(update_data: dict):
+    """Updates shairport-sync configuration."""
+    config = _read_shairport_config()
+    if not config:
+        config = {}
+    config['general']['output_backend'] = "pa"
+
+    for key, value in update_data.items():
+        logging.info(f"key:{key},value:{value}")
+        if key == "adv_name":
+            config['general']['name'] = value
+        elif key == "hw_device":        
+            config.setdefault('stagepi', {})['output_device'] = value
+        elif key == "enabled":
+            _update_default_audio(value)
+    _write_shairport_config(config)
 
 def _get_service_config(name: str):
     if name == "aes67":
         return _get_service_config_aes67()
+    if name == "airplay":
+        return _filter_airplay_config(_read_shairport_config())
+    if name == "bluetooth":
+        return {}
+    if name == "a2dp":
+        return {}
     return {}
 
 
 def __update_service_config(name: str, update_data: dict):
     if name == "aes67":
         __update_service_config_aes67(update_data)
+    if name == "airplay":
+        _update_shairport_config(update_data)
+
 
 def update_service(name: str, update_data: dict):
     logger.info(f"CORE: Updating service '{name}' with data: {update_data}")

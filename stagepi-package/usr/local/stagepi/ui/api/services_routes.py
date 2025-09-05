@@ -11,7 +11,9 @@ class ServiceUpdateRequest(BaseModel):
     host: Optional[str] = None
     port: Optional[int] = None
     net_device: Optional[str] = None
+    adv_name: Optional[str] = None
     hw_device: Optional[str] = None
+
 
 @router.get("/")
 async def get_all_services():

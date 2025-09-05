@@ -1,6 +1,5 @@
 # core/network_manager.py
 import subprocess
-import re
 import logging
 
 # --- Configure Logging ---
@@ -60,6 +59,72 @@ def _get_connection_name_for_device(device: str) -> str:
             raise RuntimeError(f"No connection profile found for {device}.")
     except (RuntimeError, IndexError):
         raise RuntimeError(f"Could not find a connection profile for {device}.")
+
+
+def _get_wifi_region():
+    """Gets the Wi-Fi regulatory domain (country code)."""
+    try:
+        result = subprocess.run(
+            ["wpa_cli", "get", "country"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=5
+        )
+        output = result.stdout
+        logging.info(f"wpa_cli get country output: {output}")
+        output_lines = result.stdout.strip().splitlines()
+
+        if output_lines:
+            return output_lines[-1]
+        else:
+            return None
+    except (FileNotFoundError, subprocess.CalledProcessError, IndexError) as e:
+        logging.warning(f"Could not determine Wi-Fi region: {e}")
+        return None
+
+
+def _set_wifi_region(region: str):
+    """Sets the Wi-Fi regulatory domain (country code)."""
+    if not region or len(region) != 2:
+        logging.error(f"Invalid region code provided: {region}")
+        raise ValueError("Invalid region code. Must be a 2-letter country code.")
+
+    try:
+        command = ["sudo", "raspi-config", "nonint", "do_wifi_country", region]
+        logging.info(f"Executing command: {' '.join(command)}")
+
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=20  # Increased timeout for raspi-config
+        )
+
+        logging.info(f"Successfully set Wi-Fi region to {region}. Output: {result.stdout.strip()}")
+
+        # After setting the region, we might need to restart services.
+        # For now, we'll just return success. A reboot is often recommended.
+
+        return _get_wifi_region() # Return the new region to confirm
+
+    except FileNotFoundError:
+        logging.error("'raspi-config' command not found. This script appears to be running on a non-Raspberry Pi OS.")
+        raise RuntimeError("'raspi-config' is not available.")
+    except subprocess.CalledProcessError as e:
+        error_message = e.stderr.strip()
+        logging.error(f"Failed to set Wi-Fi region. Error: {error_message}")
+        # Check for a specific error from raspi-config if possible
+        if "invalid country code" in error_message.lower():
+            raise ValueError(f"Invalid country code '{region}' according to raspi-config.")
+        raise RuntimeError(f"Failed to set Wi-Fi region: {error_message}")
+    except subprocess.TimeoutExpired:
+        logging.error("Timeout expired while trying to set the Wi-Fi region.")
+        raise RuntimeError("Timeout occurred while setting Wi-Fi region.")
+    except Exception as e:
+        logging.error(f"An unexpected error occurred while setting Wi-Fi region: {e}")
+        raise
 
 
 def _get_ip_info(interface: str):
@@ -171,10 +236,13 @@ def get_wifi_config():
     info = _get_ip_info('wlan0')
     if not info.get("connected"):
         return {"deviceMode": "client", "clientConfig": {"connected": False, "ssid": None}, "apConfig": None}
+
     if "Hotspot" in info.get("connection"):
         deviceMode = "ap"
     else:
         deviceMode = "client"
+
+    info['region'] = _get_wifi_region()
 
     return {"deviceMode": deviceMode, "clientConfig": info, "apConfig": info}
 
@@ -224,20 +292,12 @@ def set_wifi_config(config):
         except RuntimeError as e:
             logging.warning(f"Could not setup Hotspot: {e}")
             return {"error": str(e)}
-
-    return get_wifi_config()
-
-def reset_wifi_config():
-    """Disconnects and forgets any active Wi-Fi connection."""
     try:
-        info = _get_ip_info('wlan0')
-        if info.get("connected"):
-            conn_name = info['ssid']
-            logging.info(f"CORE: Deleting connection '{conn_name}'...")
-            _run_nmcli_command(["connection", "delete", conn_name])
-    except RuntimeError as e:
-        logging.warning(f"Could not reset Wi-Fi (maybe no active connection): {e}")
-    
+         _set_wifi_region(config.region)
+    except (ValueError, RuntimeError) as e:
+        logging.warning(f"Could not set region {config.region}: {e}")
+        return {"error": str(e)}
+
     return get_wifi_config()
 
 def scan_for_networks():
