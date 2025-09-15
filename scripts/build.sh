@@ -31,18 +31,29 @@ sed -E -i 's/(Version: [0-9]+\.)([0-9]+)(\.[0-9]+)/echo "\1$((\2+1))\3"/ge' stag
 echo "$VERSION_STRING" > stagepi-package/usr/local/stagepi/version
 
 # Commit the version file update
-git add stagepi-package/usr/local/stagepi/version
-git commit -m "Update version file to ${VERSION_STRING}"
+# git add stagepi-package/usr/local/stagepi/version
+# git commit -m "Update version file to ${VERSION_STRING}"
 
 # Set permissions and prepare build directory
 chmod 755 stagepi-package/DEBIAN/postinst
 mkdir -p build
 
 # Define the package name
-PACKAGE_NAME="stagepi_${VERSION_STRING}_arm64.deb"
+PACKAGE_NAME="stagepi_${VERSION_STRING}_all.deb"
+
+# Cleanup the previous package
+rm -rf package
+# Add base content for the package
+cp -a stagepi-package package
+# Add the frontend
+cp -a src/frontend/dist package
+# Add the backend
+cp -a src/backend/api package
+cp -a src/backend/core package
+cp -a src/backend/main.py package
 
 # Build the package
-dpkg-deb --build stagepi-package "build/${PACKAGE_NAME}"
+dpkg-deb --build package "build/${PACKAGE_NAME}"
 
 # Create symlink to latest build
 cd build

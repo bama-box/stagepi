@@ -1,0 +1,53 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color-scheme: dark;
+  background-color: #1a1a1a;
+}
+
+body {
+  margin: 0;
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* --- Desktop First Layout --- */
+#app-container {
+  display: grid;
+  /* This is the correct 2-column layout for desktop */
+  grid-template-areas:
+    'top-bar top-bar'
+    'side-bar main-content'
+    'bottom-bar bottom-bar';
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 240px 1fr; /* Two columns */
+  height: 100vh;
+  width: 100vw;
+}
+
+.card {
+  padding: 2em;
+  border: 1px solid #333;
+  border-radius: 8px;
+  background-color: #242424;
+}
+
+/* --- Mobile Override --- */
+@media (max-width: 768px) {
+  #app-container {
+    /* Change to a single content column for mobile */
+    grid-template-areas:
+      'top-bar'
+      'main-content'
+      'bottom-bar';
+    grid-template-columns: 1fr; /* A single column */
+    grid-template-rows: auto 1fr auto;
+  }
+}

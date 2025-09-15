@@ -1,3 +1,5 @@
 build
 private
 pi-gen
+node_modules
+package

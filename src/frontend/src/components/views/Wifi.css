@@ -1,0 +1,143 @@
+.wifi-view {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.view-header h1 {
+  margin: 0;
+}
+
+.refresh-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #444;
+  border: 1px solid #666;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.refresh-button:hover {
+  background-color: #555;
+}
+
+.refresh-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ff9800;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.5rem;
+  color: #ff9800;
+}
+
+.card-header h3 {
+  margin: 0;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #444;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  color: #aaa;
+}
+
+.info-value {
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.device-mode {
+  font-weight: 700;
+  background-color: #ff9800;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.status-indicator {
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.status-indicator.connected {
+  background-color: #ff9800;
+  color: white;
+}
+
+.status-indicator.disconnected {
+  background-color: #dc3545;
+  color: white;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.mode-selector {
+  display: flex;
+  border: 1px solid #555;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.mode-selector label {
+  flex: 1;
+  text-align: center;
+  padding: 0.75rem;
+  cursor: pointer;
+  background-color: #333;
+  color: #aaa;
+  transition: background-color 0.2s;
+}
+
+.mode-selector label:not(:last-child) {
+  border-right: 1px solid #555;
+}
+
+.mode-selector label.active {
+  background-color: #007acc;
+  color: white;
+  font-weight: 600;
+}
+
+/* Hide the actual radio button */
+.mode-selector input[type="radio"] {
+  display: none;
+}
+
+.client-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}

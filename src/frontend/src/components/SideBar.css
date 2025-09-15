@@ -1,0 +1,45 @@
+.side-bar {
+  grid-area: side-bar;
+  background-color: #1e1e1e;
+  border-right: 1px solid #444;
+  padding: 1rem 0;
+}
+.side-bar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.side-bar li {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1.5rem;
+  cursor: pointer;
+  color: #aaa;
+  transition: background-color 0.2s, color 0.2s;
+  border-left: 3px solid transparent;
+}
+.side-bar li:hover {
+  background-color: #333;
+}
+.side-bar li.active {
+  color: #fff;
+  background-color: #2a2a2e;
+  border-left-color: #ff9800;
+}
+
+@media (max-width: 768px) {
+  .side-bar {
+    position: fixed; /* Position it relative to the viewport */
+    left: 0;
+    top: 0;
+    height: 100%;
+    z-index: 1000; /* Ensure it's on top of other content */
+    transform: translateX(-100%); /* Start off-screen */
+    transition: transform 0.3s ease-in-out;
+  }
+
+  .side-bar.is-open {
+    transform: translateX(0); /* Slide it into view */
+  }
+}

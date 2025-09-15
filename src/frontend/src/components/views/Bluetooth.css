@@ -1,0 +1,28 @@
+.bluetooth-view h1 {
+    margin-bottom: 2rem;
+}
+
+.service-description {
+    color: #aaa;
+    margin-top: 0;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #ff9800;
+    padding-bottom: 1.5rem;
+}
+
+.settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.setting-item {
+    padding: 1rem;
+    border: 1px solid #444;
+    border-radius: 6px;
+}
+
+.setting-item.saving {
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}

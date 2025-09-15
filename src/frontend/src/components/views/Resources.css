@@ -1,0 +1,51 @@
+.resources-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.resources-grid .card {
+  display: flex;
+  flex-direction: column;
+}
+
+.resources-grid .card.full-width {
+  grid-column: 1 / -1;
+}
+
+.resources-grid .card h3 {
+  margin-top: 0;
+  border-bottom: 1px solid #ff9800;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.5rem;
+  color: #ff9800;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* Adds space between the icon and text */
+}
+
+.metric {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.metric span:first-child {
+  color: #ffb74d;
+}
+
+.metric span:last-child {
+  font-weight: 600;
+}
+
+.error {
+  background-color: #412020;
+  border-color: #833b3b;
+  color: #ffc2c2;
+}
+
+@media (max-width: 768px) {
+  .resources-grid {
+    grid-template-columns: 1fr; /* Stack the cards in a single column */
+  }
+}

@@ -1,0 +1,49 @@
+.network-view h1 {
+    margin-bottom: 2rem;
+}
+
+/* Reusing form styles from other views */
+.config-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: left;
+}
+.form-row label {
+    font-size: 0.9rem;
+    color: #aaa;
+    font-weight: 500;
+}
+.form-row input,
+.form-row select {
+    background-color: #1a1a1a;
+    border: 1px solid #555;
+    color: #fff;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-family: inherit;
+}
+.form-row input:disabled {
+    background-color: #333;
+    color: #888;
+    cursor: not-allowed;
+}
+.form-row small {
+    font-size: 0.8rem;
+    color: #888;
+    margin-top: 0.25rem;
+}
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #444;
+}

@@ -1,0 +1,54 @@
+.top-bar {
+  grid-area: top-bar;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background-color: #1e1e1e;
+  border-bottom: 1px solid #444;
+  flex-wrap: wrap;
+}
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #eee;
+}
+.logo-icon {
+  color: #ff9800;
+}
+.device-info {
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: #007ce9;
+  
+  /* Add these lines for alignment */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hamburger-menu {
+  display: none; /* Hidden on desktop */
+  background: none;
+  border: none;
+  color: #eee;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .hamburger-menu {
+    display: block; /* Visible on mobile */
+  }
+
+  .logo-container {
+    /* Hide the logo text on mobile to save space */
+    font-size: 1rem;
+  }
+  .logo-container .logo-text {
+    display: none;
+  }
+}

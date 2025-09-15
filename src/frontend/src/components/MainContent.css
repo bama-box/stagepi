@@ -1,0 +1,6 @@
+.main-content {
+  grid-area: main-content;
+  padding: 2rem;
+  overflow-y: auto;
+  font-size: 0.9rem;
+}
