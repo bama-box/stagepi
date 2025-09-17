@@ -1,7 +1,7 @@
 Welcome to the stagepi wiki!
 # StagePi
 
-# Stage Pi: Digital Stage Box Using Raspberry Pi
+# Stage Pi: Open source digital stage box firmware
 
 ## Project Description
 
@@ -9,7 +9,7 @@ Welcome to the stagepi wiki!
 
 This project aims to provide musicians, sound engineers, and live event enthusiasts with a robust, customizable, and portable system for audio routing, processing, and control in live performance environments.
 
-Traditional stage boxes can be bulky and expensive. Stage Pi leverages the compact and cost-effective Raspberry Pi to offer a flexible alternative, enabling users to build their own digital audio network interface tailored to their specific needs.
+Traditional stage boxes can be bulky and expensive. Stage Pi leverages the compact and cost-effective alternatives such as raspberry Pi to offer a flexible alternative, enabling users to build their own digital audio network interface tailored to their specific needs.
 
 ## Features
 
@@ -40,7 +40,7 @@ Traditional stage boxes can be bulky and expensive. Stage Pi leverages the compa
 - **Network Audio Protocols**:  
   - OSC  
   - Custom UDP/TCP for control  
-  - Dante (where applicable)
+  - Compatible with AES67 enabled systems such as Ravenna, Dante etc'
 
 ## Getting Started
 
