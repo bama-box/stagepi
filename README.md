@@ -27,7 +27,7 @@ Traditional stage boxes can be bulky and expensive. Stage Pi leverages the compa
 - **Raspberry Pi** (e.g., Raspberry Pi 4 Model B)
 - **HiFiBerry HATs**: High-quality audio HATs for the Raspberry Pi  
   (e.g., HiFiBerry DAC+ ADC Pro, HiFiBerry Digi+ I/O)  
-  [HiFiBerry XLR Steel Case Assembly Guide](https://www.hifiberry.com/docs/hardware/assembling-the-xlr-steions
+  [HiFiBerry XLR Steel Case Assembly Guide](https://www.hifiberry.com/docs/hardware/assembling-the-xlr-steel-case/)
 - **Ethernet and Wi-Fi Connectivity**
 - **Custom Enclosure** (recommended)
 
