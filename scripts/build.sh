@@ -25,17 +25,17 @@ VERSION="0.1.alpha"
 VERSION_STRING="${VERSION}-${GIT_HASH}"
 
 # Bump the package minor version
-sed -E -i 's/(Version: [0-9]+\.)([0-9]+)(\.[0-9]+)/echo "\1$((\2+1))\3"/ge' stagepi-package/DEBIAN/control
+sed -E -i 's/(Version: [0-9]+\.)([0-9]+)(\.[0-9]+)/echo "\1$((\2+1))\3"/ge' src/stagepi-package/DEBIAN/control
 
 # Update version file
-echo "$VERSION_STRING" > stagepi-package/usr/local/stagepi/version
+echo "$VERSION_STRING" > src/stagepi-package/usr/local/stagepi/version
 
 # Commit the version file update
 # git add stagepi-package/usr/local/stagepi/version
 # git commit -m "Update version file to ${VERSION_STRING}"
 
 # Set permissions and prepare build directory
-chmod 755 stagepi-package/DEBIAN/postinst
+chmod 755 src/stagepi-package/DEBIAN/postinst
 mkdir -p build
 
 # Define the package name
@@ -44,7 +44,7 @@ PACKAGE_NAME="stagepi_${VERSION_STRING}_all.deb"
 # Cleanup the previous package
 rm -rf package
 # Add base content for the package
-cp -a stagepi-package package
+cp -a src/stagepi-package package
 # Add the frontend
 cp -a src/frontend/dist package
 # Add the backend
