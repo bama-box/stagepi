@@ -45,12 +45,13 @@ PACKAGE_NAME="stagepi_${VERSION_STRING}_all.deb"
 rm -rf package
 # Add base content for the package
 cp -a src/stagepi-package package
+mkdir -p package/usr/local/stagepi/ui
 # Add the frontend
-cp -a src/frontend/dist package
+cp -a src/frontend/dist package/usr/local/stagepi/ui
 # Add the backend
-cp -a src/backend/api package
-cp -a src/backend/core package
-cp -a src/backend/main.py package
+cp -a src/backend/api package/usr/local/stagepi/ui
+cp -a src/backend/core package/usr/local/stagepi/ui
+cp -a src/backend/main.py package/usr/local/stagepi/ui
 
 # Build the package
 dpkg-deb --build package "build/${PACKAGE_NAME}"
