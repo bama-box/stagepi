@@ -1,4 +1,4 @@
-import { FiWifi, FiBluetooth, FiShare2, FiHardDrive, FiGrid, FiBarChart2 } from 'react-icons/fi';
+import { FiWifi, FiBluetooth, FiShare2, FiHardDrive, FiGrid, FiBarChart2, FiZap } from 'react-icons/fi';
 import type { AppView } from '../types';
 import './SideBar.css';
 
@@ -9,6 +9,8 @@ interface SideBarProps {
   onClose: () => void;
 }
 
+// (removed duplicate import)
+// ...existing code...
 const navItems = [
   { name: 'Resources', icon: <FiHardDrive /> },
   { name: 'Network', icon: <FiGrid /> },
@@ -16,6 +18,7 @@ const navItems = [
   { name: 'Airplay', icon: <FiShare2 /> },
   { name: 'Bluetooth', icon: <FiBluetooth /> },
   { name: 'AES67', icon: <FiBarChart2 /> },
+  { name: 'LED', icon: <FiZap /> },
 ];
 
 export function SideBar({ activeView, setActiveView, isOpen, onClose }: SideBarProps) {

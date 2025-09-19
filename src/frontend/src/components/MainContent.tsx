@@ -5,6 +5,7 @@ import { Bluetooth } from './views/Bluetooth';
 import { Aes67 } from './views/Aes67';
 import { Airplay } from './views/Airplay';
 import { Network } from './views/Network';
+import LedView from './views/LedView';
 import './MainContent.css';
 
 interface MainContentProps {
@@ -38,6 +39,8 @@ export function MainContent({ activeView }: MainContentProps) {
         return <Aes67 />;
       case 'Airplay':
         return <Airplay />;
+      case 'LED':
+        return <LedView />;
       // Add other cases as you build them
       default:
         return <PlaceholderView viewName={activeView} />;

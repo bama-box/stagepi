@@ -19,6 +19,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 # api/system_routes.py
 from fastapi import APIRouter
 from core import system_manager
+from fastapi import HTTPException
 
 # Create a new router object
 router = APIRouter()
@@ -38,3 +39,31 @@ async def get_system_resources():
     """
     resource_data = system_manager.get_resources()
     return resource_data
+
+# --- LED Control Endpoints ---
+@router.get("/led")
+async def get_led_state():
+    """
+    Returns state and availability for all LEDs.
+    """
+    result = system_manager.get_led_state()
+    if result is None:
+        raise HTTPException(status_code=404, detail="LEDs not available")
+    return result
+
+@router.put("/led")
+async def set_led_state(action: str, led: str = None):
+    """
+    Sets LED state: 'on', 'off', 'blink'.
+    If led is provided (ACT or PWR), controls only that LED.
+    If led is not provided, controls all available LEDs.
+    """
+    if led and led not in ["ACT", "PWR"]:
+        raise HTTPException(status_code=400, detail="Invalid LED specified. Must be 'ACT' or 'PWR'")
+    if action not in ["on", "off", "blink"]:
+        raise HTTPException(status_code=400, detail="Invalid action. Must be 'on', 'off', or 'blink'")
+
+    result = system_manager.set_led_state(action, led)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"LED {led or 'all'} not available")
+    return result

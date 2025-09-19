@@ -34,6 +34,6 @@ touch ./stage3/SKIP_IMAGES ./stage4/SKIP_IMAGES ./stage5/SKIP_IMAGES
 
 # Copy the new stage which will install our .deb package
 # It's cleaner to have a dedicated stage for our custom package
-cp -rL ../04-install-stagepi stage2/
+# cp -rL ../04-install-stagepi stage2/
 
 CLEAN=1 ./build-docker.sh

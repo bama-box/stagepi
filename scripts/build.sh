@@ -46,6 +46,8 @@ rm -rf package
 # Add base content for the package
 cp -a src/stagepi-package package
 mkdir -p package/usr/local/stagepi/ui
+# build the frontend
+(cd src/frontend && npm install && npm run build) 
 # Add the frontend
 cp -a src/frontend/dist package/usr/local/stagepi/ui
 # Add the backend
@@ -54,9 +56,9 @@ cp -a src/backend/core package/usr/local/stagepi/ui
 cp -a src/backend/main.py package/usr/local/stagepi/ui
 
 # Build the package
-dpkg-deb --build package "build/${PACKAGE_NAME}"
+sudo dpkg-deb --build package "build/${PACKAGE_NAME}"
 
 # Create symlink to latest build
 cd build
-[ -L stagepi-latest.deb ] && unlink stagepi-latest.deb
-ln -s "$PACKAGE_NAME" stagepi-latest.deb
+[ -L stagepi-latest.deb ] && sudo unlink stagepi-latest.deb
+sudo ln -s "$PACKAGE_NAME" stagepi-latest.deb

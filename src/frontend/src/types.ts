@@ -1,1 +1,1 @@
-export type AppView = 'Network' | 'Wifi' | 'Airplay' | 'Bluetooth' | 'AES67' | 'Resources';
+export type AppView = 'Network' | 'Wifi' | 'Airplay' | 'Bluetooth' | 'AES67' | 'Resources' | 'LED';
