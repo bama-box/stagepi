@@ -26,8 +26,13 @@ if [ ! -d "pi-gen" ]; then
 else
     cd pi-gen
 fi
-echo "IMG_NAME='stagepi-os'" > config
-echo "arm_64bit=1" >> config
+
+(echo "IMG_NAME='stagepi-os'"
+ echo "arm_64bit=1"
+ echo "FIRST_USER_NAME=pi"
+ echo "FIRST_USER_PASS=stage314"
+ echo "ENABLE_SSH=1") > config
+
 touch ./stage3/SKIP ./stage4/SKIP ./stage5/SKIP
 touch ./stage3/SKIP_IMAGES ./stage4/SKIP_IMAGES ./stage5/SKIP_IMAGES
 
