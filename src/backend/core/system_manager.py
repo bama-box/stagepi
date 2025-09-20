@@ -49,7 +49,7 @@ def get_led_state():
         try:
             with open(paths["trigger"], "r") as f:
                 trigger_raw = f.read()
-            match = re.search(r'\[(\w+)\]', trigger_raw)
+            match = re.search(r'\[([\w-]+)\]', trigger_raw)
             if match:
                 triggers = match.group(1)
             else: 
@@ -112,7 +112,7 @@ def set_led_state(action: str, led_name: str = None) -> dict:
             with open(paths["trigger"], "r") as f:
                 trigger_raw = f.read()
             
-            match = re.search(r'\[(\w+)\]', trigger_raw)
+            match = re.search(r'\[([\w-]+)\]', trigger_raw)
             triggers = match.group(1) if match else None
 
             # Detect final state
