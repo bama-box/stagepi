@@ -1,7 +1,7 @@
 Welcome to the stagepi wiki!
 # StagePi
 
-# Stage Pi: Open source AES67 digital stage box software
+# Stage Pi: Open source AES67 digital stage box
 
 ## Project Description
 
