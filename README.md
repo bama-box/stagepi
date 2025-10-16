@@ -55,7 +55,7 @@ Traditional stage boxes can be bulky and expensive. Stage Pi leverages the compa
 ## Download & Install
 
 ### 1. Get the Image
-Download the latest StagePi image
+Download the latest [StagePi image](https://sourceforge.net/projects/stagepi/files/2025-09-20-stagepi-v0.1.alpha-acc1359.zip/download) 
 
 ### 2. Burn with Raspberry Pi Imager
 - Download [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
