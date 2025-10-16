@@ -1,24 +1,26 @@
 Welcome to the stagepi wiki!
 # StagePi
 
-# Stage Pi: Open source digital stage box firmware
+# Stage Pi: Open source AES67 digital stage box firmware
 
 ## Project Description
 
-**Stage Pi** is an open-source project dedicated to creating a versatile and affordable digital stage box solution using the power of embedded Linux.
+**Stage Pi** is an open-source project dedicated to creating a versatile and affordable AES67 digital stage box solution using the power of embedded Linux.
 
 This project aims to provide musicians, sound engineers, and live event enthusiasts with a robust, customizable, and portable system for audio routing, processing, and control in live performance environments.
 
-Traditional stage boxes can be bulky and expensive. Stage Pi leverages the compact and cost-effective alternatives such as raspberry Pi to offer a flexible alternative, enabling users to build their own digital audio network interface tailored to their specific needs.
+Traditional stage boxes can be bulky and expensive. Stage Pi leverages the compact and cost-effective alternatives such as raspberry Pi, IMX8, etc.
+offering a flexible alternative, enabling users to build their own digital audio network interface tailored to their specific needs.
 
 ## Features
 
 - **Customizable Audio Routing**: Configure inputs and outputs to suit various stage setups.
 - **Low-Latency Audio**: Designed for real-time audio performance.
-- **Network Integration**: Connects seamlessly with digital audio consoles and other network-enabled devices (e.g., Dante, or custom protocols).
+- **Network Integration**: Connects seamlessly with digital audio consoles and other network-enabled devices (e.g. AES67, or custom protocols).
 - **Compact & Portable**: Built around the small form factor of the Raspberry Pi.
 - **Open Source**: Fully customizable and extensible by the community.
-- **Web Interface (In Progress)**: Easy configuration and monitoring via a web browser.
+- **Web Interface**: Easy configuration and monitoring via a web browser.
+- **NMOS control plane (In Progress)**: Easy AES67 configuration via NMOS. 
 
 ## Technologies Used
 
@@ -40,8 +42,7 @@ Traditional stage boxes can be bulky and expensive. Stage Pi leverages the compa
 - **Network Audio Protocols**:  
   - OSC  
   - Custom UDP/TCP for control  
-  - Compatible with AES67 enabled systems such as Ravenna, Dante etc'
-
+  - Professional-grade uncompressed audio networking compatible with AES67 enabled systems such as Dante, RAVENNA, Livewire+, WheatNet-IP, Q-LAN
 ## Getting Started
 
 ### Prerequisites
