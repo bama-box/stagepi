@@ -41,9 +41,9 @@ sudo nmcli connection delete Hotspot
 sudo nmcli -t device wifi hotspot ifname wlan0 ssid Stagepi-$id-$hostname password $password
 
 #setup ethernet
+sudo ip link set eth0 down
 sudo nmcli connection delete eth0
-sudo nmcli connection add type ethernet ifname eth0 con-name eth0 ip4 192.168.68.68/24 autoconnect yes
+sudo nmcli connection add type ethernet ifname eth0 con-name eth0 ip4 192.168.1.100/24 autoconnect yes
 sudo nmcli connection modify eth0 ipv4.method auto
 sudo nmcli connection modify eth0 ipv6.method auto
 sudo nmcli connection up eth0
-#systemctl disable first-boot.service

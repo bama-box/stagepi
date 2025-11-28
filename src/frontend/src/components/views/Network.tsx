@@ -137,7 +137,7 @@ export function Network() {
           </div>
           <div className="form-row">
             <label htmlFor="dnsServers">DNS Servers</label>
-            <input type="text" id="dnsServers" name="dnsServers" value={editData.dnsServers.join(', ')} onInput={handleInputChange} />
+            <input type="text" id="dnsServers" name="dnsServers" value={(editData.dnsServers || []).join(', ')} onInput={handleInputChange} />
             <small>Enter multiple servers separated by a comma.</small>
           </div>
           <div className="form-actions">
