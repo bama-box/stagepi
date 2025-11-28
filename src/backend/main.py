@@ -33,7 +33,7 @@ app.add_middleware(
 app.include_router(system_routes.router, prefix="/system", tags=["System"])
 app.include_router(network_routes.router, prefix="/network", tags=["Network"])
 app.include_router(services_routes.router, prefix="/services", tags=["Services"])
-app.include_router(sound_hw_routes.router, prefix="/sound-hw", tags=["Sound HW"])
+app.include_router(sound_hw_routes.router, prefix="/sound", tags=["Sound"])
 
 # This directory should contain the 'dist' folder from your Preact build
 UI_BUILD_DIR = os.path.join(os.path.dirname(__file__), "dist")

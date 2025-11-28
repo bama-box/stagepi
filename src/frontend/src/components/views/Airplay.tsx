@@ -52,10 +52,10 @@ export function Airplay() {
   useEffect(() => {
     fetchAirplayStatus();
 
-    fetch(`${API_BASE_URL}/sound-hw/`)
+    fetch(`${API_BASE_URL}/sound/output`)
       .then(res => res.json())
-      .then(data => setSoundDevices(data.sound_hardware))
-      .catch(err => console.error("Failed to fetch sound hardware:", err));
+      .then(data => setSoundDevices(data.outputs || []))
+      .catch(err => console.error("Failed to fetch sound outputs:", err));
   }, []);
 
   // --- Event Handlers ---
