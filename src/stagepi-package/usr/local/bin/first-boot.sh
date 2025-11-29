@@ -37,16 +37,43 @@ sed -i "s/127.0.1.1.*/127.0.1.1 $hostname/" /etc/hosts
 
 # need to restart for the new name get advertised
 sudo systemctl restart avahi-daemon.service 
+
 # TODO: resovle hostname conflicts
+
 # setup wifi hotspot
 sudo nmcli connection delete wlan0
 sudo nmcli connection delete Hotspot
 sudo nmcli -t device wifi hotspot ifname wlan0 ssid Stagepi-$id-$hostname password $password
 
-#setup ethernet
+# reconfigure ethernet to static IP
 sudo ip link set eth0 down
 sudo nmcli connection delete eth0
-sudo nmcli connection add type ethernet ifname eth0 con-name eth0 ip4 192.168.1.100/24 autoconnect yes
-sudo nmcli connection modify eth0 ipv4.method auto
-sudo nmcli connection modify eth0 ipv6.method auto
+
+#setup ethernet
+FILE_PATH="/etc/NetworkManager/system-connections/eth0.nmconnection"
+
+# Write the file
+sudo cat <<EOF > "$FILE_PATH"
+[connection]
+id=eth0
+type=ethernet
+interface-name=eth0
+
+[ipv4]
+method=manual
+address1=192.168.1.100/24
+EOF
+
+# Set Permissions
+sudo chmod 600 "$FILE_PATH"
+sudo chown root:root "$FILE_PATH"
+
+# Apply
+sudo nmcli connection reload
 sudo nmcli connection up eth0
+
+
+#sudo nmcli connection add type ethernet ifname eth0 con-name eth0 ip4 192.168.1.100/24 autoconnect yes
+#sudo nmcli connection modify eth0 ipv4.method auto
+#sudo nmcli connection modify eth0 ipv6.method auto
+#sudo nmcli connection up eth0
