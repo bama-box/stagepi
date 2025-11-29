@@ -1,78 +1,212 @@
-/* Add these styles to the end of Aes67.css */
+/* AES67 view styles (single-line stream rows) */
 
 .config-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .form-row {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
 }
 
 .form-row label {
-    font-size: 0.9rem;
-    color: #aaa;
-    font-weight: 500;
+  font-size: 0.9rem;
+  color: #aaa;
+  font-weight: 500;
 }
 
 .form-row input,
 .form-row select {
-    background-color: #1a1a1a;
-    border: 1px solid #555;
-    color: #fff;
-    padding: 0.75rem;
-    border-radius: 6px;
-    font-size: 1rem;
-    font-family: inherit;
+  background-color: #1a1a1a;
+  border: 1px solid #555;
+  color: #fff;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
 }
 
 .form-row input:focus,
 .form-row select:focus {
-    outline: none;
-    border-color: #ff9800;
+  outline: none;
+  border-color: #ff9800;
 }
 
 .form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 1rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #ff9800;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #ff9800;
 }
 
 .button-primary, .button-secondary {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
 .button-primary {
-    background-color: #ff9800;
-    color: white;
+  background-color: #ff9800;
+  color: white;
 }
 
-.button-primary:hover {
-    background-color: #ffb74d;
+.button-primary:hover { background-color: #ffb74d; }
+.button-secondary { background-color: #555; color: #eee; }
+.button-secondary:hover { background-color: #666; }
+.button-primary:disabled, .button-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Stream row / line styling */
+.streams-card { display: flex; flex-direction: column; gap: 0.5rem; }
+.stream-row { display: block; }
+.stream-line { display: flex; align-items: center; gap: 0.75rem; }
+
+.stream-left { display: inline-flex; align-items: center; gap: 0.5rem; }
+.stream-center { display: inline-flex; align-items: center; gap: 0.5rem; flex: 1 1 auto; }
+.stream-center { display: flex; align-items: center; gap: 0.5rem; flex: 1 1 auto; min-width: 0; }
+.stream-right { display: inline-flex; align-items: center; gap: 0.5rem; flex: 0 0 9.6rem; justify-content: flex-end; }
+
+.stream-id { flex: 0 0 8.2rem; min-width: 6.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stream-direction { flex: 0 0 6.2rem; }
+.addr-left { flex: 0 0 8rem; min-width: 6rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stream-addr { flex: 0 0 12rem; min-width: 8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stream-port { width: 6rem; }
+
+/* icons next to address */
+.stream-icons { display:inline-flex; align-items:center; gap:0.32rem; margin-right:0.5rem; color:inherit; }
+.stream-icons .icon-net, .stream-icons .icon-hw { width:16px; height:16px; opacity:0.95; }
+.stream-icons .icon-net { transform: translateY(1px); }
+.stream-icons .icon-hw { transform: translateY(1px); }
+
+.stream-direction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #fff;
+  min-width: 4.2rem;
+  justify-content: center;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.2) inset;
+}
+.stream-direction.input { background: linear-gradient(180deg,#16a34a,#059669); }
+.stream-direction.output { background: linear-gradient(180deg,#2563eb,#1e40af); }
+
+/* small meta layout for net/hw values */
+.stream-meta { display: flex; gap: 0.6rem; align-items: center; margin: 0 0 0 0.5rem; color: inherit; font-size: 0.95rem; font-weight: 600; }
+.stream-meta-item { padding: 0 0.12rem; }
+.stream-meta { display: flex; gap: 0.6rem; align-items: center; margin: 0 0 0 0.5rem; color: inherit; font-size: 0.95rem; font-weight: 600; flex: 1 1 10rem; min-width: 6rem; overflow: hidden; }
+.stream-meta-item { padding: 0 0.12rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* address-left section: network icon + name placed left of IP:Port */
+.addr-left { display:inline-flex; align-items:center; gap:0.4rem; margin-right:0.45rem; color:inherit; font-weight:600; }
+.addr-left .icon-net { width:14px; height:14px; opacity:0.95; transform: translateY(1px); }
+.addr-left .addr-net { font-size:0.95rem; }
+
+/* HW meta icon */
+.hw-with-icon { display:inline-flex; align-items:center; gap:0.3rem; }
+.icon-hw-meta { width:14px; height:14px; opacity:0.95; transform: translateY(1px); }
+
+/* inline editor tweaks */
+.editor-inline select, .editor-inline .inline-input { margin-right: 0.5rem; }
+.editor-inline select[autofocus], .editor-inline input[autofocus] { outline: 2px solid var(--accent, #2b9af3); }
+
+/* Delete button */
+.delete-button {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 6px;
+  border: none;
+  background: #ff5252;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.25);
+  padding: 0.18rem;
+}
+.delete-button svg { display: block; }
+.delete-button:focus { outline: 2px solid rgba(255,82,82,0.24); }
+.delete-button:hover { background: #ff6b6b; }
+
+.icon-button.edit { width: 2.8rem; height: 2.8rem; display: inline-flex; align-items:center; justify-content:center; border-radius:6px; background:#111; color:#fff; border:none; }
+.icon-button.edit svg { width:18px; height:18px; }
+
+/* Enable / streaming toggle */
+.stream-enable { display: inline-flex; align-items: center; gap: 0.5rem; }
+.stream-toggle {
+  width: 3rem;
+  height: 3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  padding: 0;
+}
+.stream-toggle:focus { outline: 2px solid rgba(255,152,0,0.4); }
+.stream-toggle svg { display: block; width: 22px; height: 22px; }
+.stream-toggle:hover { background: rgba(255,255,255,0.02); }
+
+.streaming-indicator { display: inline-flex; align-items: flex-end; gap: 4px; height: 18px; }
+.streaming-indicator .bar { width: 5px; background: linear-gradient(180deg,#fff176,#ff7043); display: inline-block; border-radius: 2px; animation: stream 800ms linear infinite; box-shadow: 0 1px 0 rgba(0,0,0,0.25); }
+.streaming-indicator .b1 { animation-delay: 0ms; height: 7px; }
+.streaming-indicator .b2 { animation-delay: 150ms; height: 11px; }
+.streaming-indicator .b3 { animation-delay: 300ms; height: 15px; }
+@keyframes stream { 0% { transform: scaleY(0.4); opacity: 0.6 } 50% { transform: scaleY(1); opacity: 1 } 100% { transform: scaleY(0.4); opacity: 0.6 } }
+
+/* Card-style layout for control panel */
+.stream-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.04);
+  padding: 0.6rem;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-id { display: flex; align-items: center; gap: 0.6rem; }
+.card-id-text { font-weight: 700; font-size: 0.95rem; }
+.card-controls { display: flex; gap: 0.5rem; align-items: center; }
+.card-body { display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; }
+/* keep card body content left-aligned so inner .stream-line controls the spacing */
+.card-body { justify-content: flex-start; width: 100%; }
+.card-footer { display: flex; justify-content: flex-end; }
+
+.stream-card.active {
+  box-shadow: 0 6px 20px rgba(56, 142, 60, 0.12), 0 2px 6px rgba(56,142,60,0.06) inset;
+  border-color: rgba(56,142,60,0.65);
 }
 
-.button-secondary {
-    background-color: #555;
-    color: #eee;
-}
+/* inline editor controls for per-row editing */
+.editor-inline { display:flex; gap:8px; align-items:center; margin-left: 12px; }
+.editor-inline select, .editor-inline input { background: #121212; border: 1px solid #333; color: #fff; padding: 6px 8px; border-radius:6px; font-size:0.9rem; }
+.inline-input { font-family: monospace; padding:6px 8px; border-radius:6px; border:1px solid #333; background:#0f0f0f; color:#fff; }
 
-.button-secondary:hover {
-    background-color: #666;
-}
+.streams-section { display: flex; flex-direction: column; gap: 0.6rem; }
+.streams-section h4 { margin: 0 0 0.4rem 0; font-size: 0.95rem; color: #ddd; }
 
-.button-primary:disabled, .button-secondary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+/* Make the card layout responsive */
+/* Keep streams stacked vertically (single-column control panel) */
+@media (min-width: 900px) {
+  .streams-card { display: flex; flex-direction: column; gap: 0.75rem; }
 }

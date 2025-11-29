@@ -20,7 +20,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from core import service_manager
+import os
+import json
 from typing import Optional
+from typing import List, Any
 
 router = APIRouter()
 
@@ -33,6 +36,20 @@ class ServiceUpdateRequest(BaseModel):
     hw_device: Optional[str] = None
 
 
+class StreamModel(BaseModel):
+    id: Optional[Any] = None
+    mode: str
+    addr: str
+    port: int
+    hw_device: Optional[str] = None
+    net_device: Optional[str] = None
+    enabled: Optional[bool] = True
+
+
+class StreamsUpdateRequest(BaseModel):
+    streams: List[StreamModel]
+
+
 @router.get("/")
 async def get_all_services():
     return service_manager.get_all_services()
@@ -43,6 +60,10 @@ async def get_service(service_name: str):
     if not service:
         raise HTTPException(status_code=404, detail=f"Service '{service_name}' not found.")
     return service
+
+
+# AES67 stream management moved to the /streams API module.
+# For backwards compatibility the service endpoints do not expose AES67 streams anymore.
 
 @router.patch("/{service_name}")
 async def update_service(service_name: str, update_request: ServiceUpdateRequest):

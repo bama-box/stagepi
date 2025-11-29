@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
-from api import system_routes, network_routes, services_routes, sound_hw_routes
+from api import system_routes, network_routes, services_routes, sound_hw_routes, streams_routes
 # Create the main FastAPI application instance
 app = FastAPI(
     title="StagePi WebUI and API",
@@ -34,6 +34,7 @@ app.include_router(system_routes.router, prefix="/system", tags=["System"])
 app.include_router(network_routes.router, prefix="/network", tags=["Network"])
 app.include_router(services_routes.router, prefix="/services", tags=["Services"])
 app.include_router(sound_hw_routes.router, prefix="/sound", tags=["Sound"])
+app.include_router(streams_routes.router, tags=["Streams"])
 
 # This directory should contain the 'dist' folder from your Preact build
 UI_BUILD_DIR = os.path.join(os.path.dirname(__file__), "dist")

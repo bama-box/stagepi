@@ -19,6 +19,9 @@ echo "Running first boot tasks..."
 sudo raspi-config nonint do_ssh 0
 # make sure we are not blocked by rfkill
 sudo raspi-config nonint do_wifi_country IL
+# just in case unblock wifi and bluetooth
+sudo rfkill unblock bluetooth
+sudo rfkill unblock wifi
 
 # Get MAC address of eth0
 mac=$(cat /sys/class/net/eth0/address)

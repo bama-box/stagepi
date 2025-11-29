@@ -34,7 +34,8 @@ install -m 644 "$SOURCE_DIR/etc/systemd/system/stagepi-ble.service" /etc/systemd
 install -m 644 "$SOURCE_DIR/etc/systemd/system/stagepi-ui.service" /etc/systemd/system/
 install -m 644 "$SOURCE_DIR/etc/systemd/system/ptp4l.service" /etc/systemd/system/
 install -m 644 "$SOURCE_DIR/etc/systemd/system/first-boot.service" /etc/systemd/system/
-install -m 644 "$SOURCE_DIR/etc/systemd/system/stagepi-aes67.service" /etc/systemd/system/
+# Reload systemd to recognize new/changed service files
+systemctl daemon-reload
 
 # Enable services
 systemctl enable shairport-sync || true

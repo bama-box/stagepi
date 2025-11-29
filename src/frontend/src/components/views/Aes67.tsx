@@ -1,213 +1,361 @@
 import { useState, useEffect } from 'preact/hooks';
-import { ToggleSwitch } from '../ui/ToggleSwitch';
-// Assuming InfoRow is exported from a shared location or Wifi.tsx
-import { InfoRow } from './Wifi';
+import { FiPlay, FiSquare, FiTrash2, FiEdit2, FiX } from 'react-icons/fi';
+import { GiSoundWaves } from 'react-icons/gi';
+import { BsEthernet } from 'react-icons/bs';
 import './Aes67.css';
 import { API_BASE_URL } from '../../config';
 
-// --- TypeScript Interfaces ---
-interface Aes67Config {
+interface Stream {
+  id: string;
+  mode: 'input' | 'output';
   addr: string;
-  port: string;
-  hw_device: string;
-  net_device: string;
-}
-
-interface Aes67Data {
-  name: string;
-  description: string;
-  config: Aes67Config;
-  enabled: boolean;
-  active: boolean;
-}
-
-interface SoundHardware {
-  card_number: number;
-  card_name: string;
-  card_id: string;
+  port: number | string;
+  hw_device?: string;
+  net_device?: string;
+  enabled?: boolean;
 }
 
 export function Aes67() {
-  const [aes67Data, setAes67Data] = useState<Aes67Data | null>(null);
-  const [editConfig, setEditConfig] = useState<Aes67Config | null>(null);
-  const [soundDevices, setSoundDevices] = useState<SoundHardware[]>([]);
+  const [streams, setStreams] = useState<Stream[] | null>(null);
+  const [editStreams, setEditStreams] = useState<Stream[] | null>(null);
+  const [editingIds, setEditingIds] = useState<string[]>([]);
+  const [netDevices, setNetDevices] = useState<string[]>([]);
+  const [soundInputs, setSoundInputs] = useState<any[]>([]);
+  const [soundOutputs, setSoundOutputs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-
-  const isFormDirty = JSON.stringify(aes67Data?.config) !== JSON.stringify(editConfig);
-
-  // --- Data Fetching ---
-  const fetchAes67Status = () => {
-    setLoading(true);
-    setError(null);
-    fetch(`${API_BASE_URL}/services/aes67`)
-      .then(res => res.json())
-      .then(data => {
-        setAes67Data(data);
-        setEditConfig(data.config);
-      })
-      .catch(err => setError(err))
-      .finally(() => setLoading(false));
-  };
+  
 
   useEffect(() => {
-    fetchAes67Status();
+    async function load() {
+      setLoading(true);
+      try {
+        const [sRes, nRes, siRes, soRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/streams`),
+          fetch(`${API_BASE_URL}/network/interfaces`),
+          fetch(`${API_BASE_URL}/sound/input`),
+          fetch(`${API_BASE_URL}/sound/output`),
+        ]);
+        if (!sRes.ok) throw new Error('Failed to fetch streams');
+        if (!nRes.ok) throw new Error('Failed to fetch network interfaces');
+        const sJson = await sRes.json();
+        const nJson = await nRes.json();
+        let siJson: any = [];
+        let soJson: any = [];
+        try { siJson = await siRes.json(); } catch { siJson = []; }
+        try { soJson = await soRes.json(); } catch { soJson = []; }
+        const parseDevices = (j: any) => {
+          if (!j) return [];
+          if (Array.isArray(j)) return j;
+          if (Array.isArray(j.inputs)) return j.inputs;
+          if (Array.isArray(j.outputs)) return j.outputs;
+          if (Array.isArray(j.devices)) return j.devices;
+          return [];
+        };
+        const inDevices = parseDevices(siJson);
+        const outDevices = parseDevices(soJson);
 
-    fetch(`${API_BASE_URL}/sound/output`)
-      .then(res => res.json())
-      .then(data => setSoundDevices(data.outputs || []))
-      .catch(err => console.error("Failed to fetch sound outputs:", err));
+        const fetched: Stream[] = (sJson.streams || []).map((st: any) => ({
+          id: st.id || `s-${Math.random().toString(16).slice(2,10)}`,
+          mode: st.mode || 'output',
+          addr: st.addr || '239.69.22.10',
+          port: st.port ?? 5004,
+          hw_device: st.hw_device || '',
+          net_device: st.net_device || (nJson.interfaces && nJson.interfaces[0]) || '',
+          enabled: typeof st.enabled === 'boolean' ? st.enabled : true,
+        }));
+        setStreams(fetched);
+        setEditStreams(JSON.parse(JSON.stringify(fetched)));
+        setNetDevices(nJson.interfaces || []);
+        setSoundInputs(inDevices || []);
+        setSoundOutputs(outDevices || []);
+      } catch (err: any) {
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
   }, []);
 
-  // --- Event Handlers ---
-  const handleToggle = async (newEnabledState: boolean) => {
-    // This logic remains correct as it only sends the 'enabled' field
-    if (!aes67Data || isSaving) return;
-    
-    setIsSaving(true);
-    const originalData = { ...aes67Data };
-    setAes67Data({ ...aes67Data, enabled: newEnabledState });
+  const handleReset = () => { setEditStreams(streams ? JSON.parse(JSON.stringify(streams)) : null); };
 
+  const toggleEdit = (id: string) => setEditingIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const isEditing = (id: string) => editingIds.includes(id);
+
+  const updateStreamField = (idx: number, patch: Partial<Stream>) => {
+    if (!editStreams) return;
+    const updated = [...editStreams];
+    updated[idx] = { ...updated[idx], ...patch };
+    setEditStreams(updated);
+  };
+
+  const patchStreamObj = async (streamObj: Stream) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/services/aes67`, {
+      const id = streamObj.id;
+      const res = await fetch(`${API_BASE_URL}/streams/${encodeURIComponent(id)}`, {
         method: 'PATCH',
-        headers: { 'accept': 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: newEnabledState }),
+        headers: { accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(streamObj),
       });
-      if (!response.ok) throw new Error('Failed to update service.');
-      const updatedData = await response.json();
-      setAes67Data(updatedData);
-      setEditConfig(updatedData.config);
+      if (!res.ok) throw new Error(`Failed to patch stream ${id}`);
+      const j = await res.json();
+      const newStreams = j.streams || [];
+      setStreams(newStreams);
+      setEditStreams(JSON.parse(JSON.stringify(newStreams)));
     } catch (err: any) {
-      setAes67Data(originalData);
-      alert(`Error: ${err.message}`);
-    } finally {
-      setIsSaving(false);
+      console.error('patch error', err);
+      alert(`Error saving stream: ${err.message}`);
     }
   };
+
+
+
   
-  const handleConfigChange = (e: Event) => {
-    const { name, value } = e.target as HTMLInputElement;
-    if (editConfig) {
-      setEditConfig({ ...editConfig, [name]: value });
-    }
-  };
 
-  const handleReset = () => {
-    if (aes67Data) {
-      setEditConfig(aes67Data.config);
-    }
-  };
+  if (loading) return <div className="card">Loading AES67 status...</div>;
+  if (error) return <div className="card error">Error: {error.message}</div>;
+  if (!editStreams) return <div className="card">No data available.</div>;
 
-  const handleSave = async () => {
-    if (!isFormDirty || !editConfig || !aes67Data) return;
+  return (
+    <div className="aes67-layout">
+      <div className="card">
+        <h3>Streams</h3>
+        <div className="config-form">
+          <div className="streams-card">
+            {Array.isArray(editStreams) && editStreams.length > 0 ? (
+              (() => {
+                const entries = editStreams.map((s, i) => ({ s, i }));
+                const transmitters = entries.filter(e => e.s.mode === 'input');
+                const receivers = entries.filter(e => e.s.mode === 'output');
+                return (
+                  <>
+                    <section className="streams-section">
+                      <h4>Transmitters (Capture)</h4>
+                      {transmitters.length > 0 ? transmitters.map(({ s, i }) => (
+                        <div key={`tx-${s.id || i}`} className={`stream-card ${s.enabled ? 'active' : ''}`}>
+                          <div className="card-body">
+                            <div className="stream-line">
+                              <div className="stream-left">
+                                <button className={`stream-toggle ${s.enabled ? 'enabled' : 'disabled'}`} onClick={() => {
+                                  const updatedObj = { ...s, enabled: !s.enabled } as Stream;
+                                  updateStreamField(i, { enabled: !s.enabled });
+                                  void patchStreamObj(updatedObj);
+                                }} aria-pressed={!!s.enabled} title={s.enabled ? 'Stop stream' : 'Start stream'}>
+                                  {s.enabled ? <FiSquare size={20} /> : <FiPlay size={20} />}
+                                </button>
+                                {s.enabled && (
+                                  <div className="streaming-indicator" aria-hidden>
+                                    <span className="bar b1" />
+                                    <span className="bar b2" />
+                                    <span className="bar b3" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="stream-center">
+                                <div className="stream-id">{s.id}</div>
+                                <div className={`stream-direction ${s.mode === 'input' ? 'input' : 'output'}`}>{s.mode === 'input' ? 'Capture' : 'Receive'}</div>
+                                {!isEditing(s.id) ? (
+                                  <>
+                                    <div className="addr-left">
+                                      <BsEthernet className="icon-net" />
+                                      <span className="addr-net">{s.net_device || <em>(none)</em>}</span>
+                                    </div>
+                                    <div className="stream-addr">{`${s.addr}:${s.port}`}</div>
+                                    <div className="stream-meta">
+                                      <span className="stream-meta-item hw-with-icon"><GiSoundWaves className="icon-hw-meta" />{s.hw_device || <em>(none)</em>}</span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="editor-inline">
+                                    <select value={s.mode || 'output'} onChange={async (e) => {
+                                      const val = (e.target as HTMLSelectElement).value as 'input' | 'output';
+                                      updateStreamField(i, { mode: val });
+                                      await patchStreamObj({ ...s, mode: val } as Stream);
+                                    }} autoFocus onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
+                                      <option value="input">Input (Capture)</option>
+                                      <option value="output">Output (Receive)</option>
+                                    </select>
+                                    <select value={s.net_device || ''} onChange={async (e) => {
+                                      const val = (e.target as HTMLSelectElement).value;
+                                      updateStreamField(i, { net_device: val });
+                                      await patchStreamObj({ ...s, net_device: val } as Stream);
+                                    }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
+                                      <option value="">(none)</option>
+                                      {netDevices.map(d => <option key={d} value={d}>{d}</option>)}
+                                    </select>
+                                    <input className="inline-input" type="text" value={`${s.addr}:${s.port}`} onInput={(e) => {
+                                      const [a, p] = (e.target as HTMLInputElement).value.split(':');
+                                      updateStreamField(i, { addr: a || '', port: p ? Number(p) : '' });
+                                    }} onBlur={() => { void patchStreamObj(editStreams![i]); }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }} />
+                                    <select value={s.hw_device || ''} onChange={async (e) => {
+                                      const val = (e.target as HTMLSelectElement).value;
+                                      updateStreamField(i, { hw_device: val });
+                                      await patchStreamObj({ ...s, hw_device: val } as Stream);
+                                    }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
+                                      <option value="">(none)</option>
+                                      { (s.mode === 'input' ? soundInputs : soundOutputs).map((d:any) => (
+                                        <option key={d.card_id || d.card_name} value={d.card_name || d.card_id}>{d.card_name || d.card_id}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="stream-right">
+                                <button className="icon-button edit" onClick={() => toggleEdit(s.id)} title={isEditing(s.id) ? 'Close' : 'Edit'}>
+                                  {isEditing(s.id) ? <FiX /> : <FiEdit2 />}
+                                </button>
+                                <button className="delete-button" onClick={async () => {
+                                  const updated = [...(editStreams || [])];
+                                  updated.splice(i, 1);
+                                  setEditStreams(updated);
+                                  try {
+                                    const id = s.id;
+                                    const res = await fetch(`${API_BASE_URL}/streams/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                                    if (!res.ok) throw new Error('Failed to delete');
+                                    const j = await res.json();
+                                    setStreams(j.streams || []);
+                                    setEditStreams(JSON.parse(JSON.stringify(j.streams || [])));
+                                  } catch (err:any) { alert(`Delete error: ${err.message}`); }
+                                }} title="Delete"><FiTrash2 size={16} /></button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )) : <div className="muted">No transmitters configured.</div>}
+                    </section>
 
-    setIsSaving(true);
-    try {
-      // Create a payload that includes the required 'enabled' field
-      const payload = {
-        ...editConfig,
-        enabled: aes67Data.enabled,
-      };
+                    <section className="streams-section">
+                      <h4>Receivers (Play/Receive)</h4>
+                      {receivers.length > 0 ? receivers.map(({ s, i }) => (
+                        <div key={`rx-${s.id || i}`} className={`stream-card ${s.enabled ? 'active' : ''}`}>
+                          <div className="card-body">
+                            <div className="stream-line">
+                              <div className="stream-left">
+                                <button className={`stream-toggle ${s.enabled ? 'enabled' : 'disabled'}`} onClick={() => {
+                                  const updatedObj = { ...s, enabled: !s.enabled } as Stream;
+                                  updateStreamField(i, { enabled: !s.enabled });
+                                  void patchStreamObj(updatedObj);
+                                }} aria-pressed={!!s.enabled} title={s.enabled ? 'Stop stream' : 'Start stream'}>
+                                  {s.enabled ? <FiSquare size={20} /> : <FiPlay size={20} />}
+                                </button>
+                                {s.enabled && (
+                                  <div className="streaming-indicator" aria-hidden>
+                                    <span className="bar b1" />
+                                    <span className="bar b2" />
+                                    <span className="bar b3" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="stream-center">
+                                <div className="stream-id">{s.id}</div>
+                                <div className={`stream-direction ${s.mode === 'input' ? 'input' : 'output'}`}>{s.mode === 'input' ? 'Capture' : 'Receive'}</div>
+                                {!isEditing(s.id) ? (
+                                  <>
+                                    <div className="addr-left">
+                                      <BsEthernet className="icon-net" />
+                                      <span className="addr-net">{s.net_device || <em>(none)</em>}</span>
+                                    </div>
+                                    <div className="stream-addr">{`${s.addr}:${s.port}`}</div>
+                                    <div className="stream-meta">
+                                      <span className="stream-meta-item hw-with-icon"><GiSoundWaves className="icon-hw-meta" />{s.hw_device || <em>(none)</em>}</span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="editor-inline">
+                                    <select value={s.mode || 'output'} onChange={async (e) => {
+                                      const val = (e.target as HTMLSelectElement).value as 'input' | 'output';
+                                      updateStreamField(i, { mode: val });
+                                      await patchStreamObj({ ...s, mode: val } as Stream);
+                                    }} autoFocus onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
+                                      <option value="input">Input (Capture)</option>
+                                      <option value="output">Output (Receive)</option>
+                                    </select>
+                                    <select value={s.net_device || ''} onChange={async (e) => {
+                                      const val = (e.target as HTMLSelectElement).value;
+                                      updateStreamField(i, { net_device: val });
+                                      await patchStreamObj({ ...s, net_device: val } as Stream);
+                                    }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
+                                      <option value="">(none)</option>
+                                      {netDevices.map(d => <option key={d} value={d}>{d}</option>)}
+                                    </select>
+                                    <input className="inline-input" type="text" value={`${s.addr}:${s.port}`} onInput={(e) => {
+                                      const [a, p] = (e.target as HTMLInputElement).value.split(':');
+                                      updateStreamField(i, { addr: a || '', port: p ? Number(p) : '' });
+                                    }} onBlur={() => { void patchStreamObj(editStreams![i]); }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }} />
+                                    <select value={s.hw_device || ''} onChange={async (e) => {
+                                      const val = (e.target as HTMLSelectElement).value;
+                                      updateStreamField(i, { hw_device: val });
+                                      await patchStreamObj({ ...s, hw_device: val } as Stream);
+                                    }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
+                                      <option value="">(none)</option>
+                                      { (s.mode === 'input' ? soundInputs : soundOutputs).map((d:any) => (
+                                        <option key={d.card_id || d.card_name} value={d.card_name || d.card_id}>{d.card_name || d.card_id}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="stream-right">
+                                <button className="icon-button edit" onClick={() => toggleEdit(s.id)} title={isEditing(s.id) ? 'Close' : 'Edit'}>
+                                  {isEditing(s.id) ? <FiX /> : <FiEdit2 />}
+                                </button>
+                                <button className="delete-button" onClick={async () => {
+                                  const updated = [...(editStreams || [])];
+                                  updated.splice(i, 1);
+                                  setEditStreams(updated);
+                                  try {
+                                    const id = s.id;
+                                    const res = await fetch(`${API_BASE_URL}/streams/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                                    if (!res.ok) throw new Error('Failed to delete');
+                                    const j = await res.json();
+                                    setStreams(j.streams || []);
+                                    setEditStreams(JSON.parse(JSON.stringify(j.streams || [])));
+                                  } catch (err:any) { alert(`Delete error: ${err.message}`); }
+                                }} title="Delete"><FiTrash2 size={16} /></button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )) : <div className="muted">No receivers configured.</div>}
+                    </section>
+                  </>
+                );
+              })()
+            ) : (
+              <div>No streams configured.</div>
+            )}
 
-      const response = await fetch(`${API_BASE_URL}/services/aes67`, {
-        method: 'PATCH',
-        headers: {
-          'accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload), // Send the complete payload
-      });
-
-      if (!response.ok) throw new Error('Failed to save configuration.');
-      
-      const updatedData = await response.json();
-      setAes67Data(updatedData);
-      setEditConfig(updatedData.config);
-
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
-      handleReset();
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // --- Rendering ---
-  const renderContent = () => {
-    if (loading) return <div className="card">Loading AES67 status...</div>;
-    if (error) return <div className="card error">Error: {error.message}</div>;
-    if (!aes67Data || !editConfig) return <div className="card">No data available.</div>;
-
-    return (
-      <div className="aes67-layout">
-        <div className="card">
-          <p className="service-description">{aes67Data.description}</p>
-          <div className="settings-list">
-            <div className={`setting-item ${isSaving ? 'saving' : ''}`}>
-              <ToggleSwitch
-                label="Enable service"
-                checked={aes67Data.enabled}
-                onChange={handleToggle}
-                disabled={isSaving}
-              />
+            <div className="stream-actions">
+              <button className="button-secondary" onClick={async () => {
+                // Create new stream on the server immediately so it has a server-side id
+                const newStreamPayload: Partial<Stream> = { mode: 'output', addr: '239.69.22.10', port: 5004, hw_device: '', net_device: (netDevices[0] || ''), enabled: true };
+                try {
+                  const res = await fetch(`${API_BASE_URL}/streams`, {
+                    method: 'POST',
+                    headers: { accept: 'application/json', 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newStreamPayload),
+                  });
+                  if (!res.ok) throw new Error('Failed to create stream');
+                  const j = await res.json();
+                  const updatedStreams: Stream[] = j.streams || [];
+                  setStreams(updatedStreams);
+                  setEditStreams(JSON.parse(JSON.stringify(updatedStreams)));
+                  // open editor for the newly created stream (last one)
+                  const created = updatedStreams[updatedStreams.length - 1];
+                  if (created && created.id) toggleEdit(created.id as string);
+                } catch (err:any) {
+                  alert(`Create stream failed: ${err.message}`);
+                }
+              }}>Add stream</button>
             </div>
-            <InfoRow
-              label="Service Status"
-              value={aes67Data.active ? 'Active' : 'Inactive'}
-            />
-          </div>
-        </div>
 
-        <div className="card">
-          <h3>Configuration</h3>
-          <div className="config-form">
-            <div className="form-row">
-              <label htmlFor="addr">Multicast Address</label>
-              <input type="text" id="addr" name="addr" value={editConfig.addr} onInput={handleConfigChange} />
-            </div>
-            <div className="form-row">
-              <label htmlFor="port">Port</label>
-              <input type="number" id="port" name="port" value={editConfig.port} onInput={handleConfigChange} />
-            </div>
-            <div className="form-row">
-              <label htmlFor="net_device">Network Interface</label>
-              <select id="net_device" name="net_device" value={editConfig.net_device} onChange={handleConfigChange}>
-                <option value="eth0">eth0</option>
-                <option value="wlan0">wlan0</option>
-              </select>
-            </div>
-            <div className="form-row">
-              <label htmlFor="hw_device">Hardware Device</label>
-              <select id="hw_device" name="hw_device" value={editConfig.hw_device} onChange={handleConfigChange} disabled={soundDevices.length === 0}>
-                {soundDevices.length > 0 ? (
-                  soundDevices.map(dev => (
-                    <option key={dev.card_id} value={`hw:${dev.card_name}`}>
-                      {dev.card_name} (Card {dev.card_number})
-                    </option>
-                  ))
-                ) : (
-                  <option>Loading devices...</option>
-                )}
-              </select>
-            </div>
-            <div className="form-actions">
-              <button onClick={handleReset} disabled={!isFormDirty || isSaving} className="button-secondary">Reset</button>
-              <button onClick={handleSave} disabled={!isFormDirty || isSaving} className="button-primary">
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
+            {/* Reset removed: per-row cancel/reload uses Escape and immediate PATCH/POST flows */}
           </div>
         </div>
       </div>
-    );
-  };
-
-  return (
-    <div className="aes67-view">
-      <h1>AES67</h1>
-      {renderContent()}
     </div>
   );
 }
+
+export default Aes67;

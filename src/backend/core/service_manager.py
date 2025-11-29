@@ -22,6 +22,7 @@ import logging
 import libconf
 import tempfile
 import os
+import json
 
 # This dictionary maps our friendly service names to their systemd service names and descriptions.
 # NOTE: The 'service_name' values are assumptions. You may need to adjust them
@@ -39,10 +40,6 @@ _services_config = {
         "description": "Enables the AirPlay audio streaming service.",
         "service_name": "shairport-sync.service",
         "config_path": "/etc/shairport-sync.conf"},
-    "aes67": {
-        "description": "Enables AES67 audio over IP streaming.",
-        "service_name": "stagepi-aes67.service",
-        "config_path": "/usr/local/stagepi/etc/aes67.env"},
 }
 
 # A mock for systems without systemd, providing a fallback state.
@@ -50,7 +47,6 @@ _services_mock_state = {
     "bluetooth.service": {"enabled": True, "active": True},
     "btaudio.service": {"enabled": True, "active": True},
     "shairport-sync.service": {"enabled": False, "active": False},
-    "aes67.service": {"enabled": False, "active": False},
 }
 
 logger = logging.getLogger(__name__)
@@ -119,40 +115,18 @@ def get_service_by_name(name: str):
     return None
 
 def _get_service_config_aes67():
-    config_path = _services_config["aes67"]["config_path"]
-    config = {}
-    try:
-        with open(config_path, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if line and '=' in line:
-                    key, value = line.split('=', 1)
-                    config[key.strip().lower()] = value.strip().replace('"', '')
-    except FileNotFoundError:
-        logger.warning(f"Config file not found at {config_path}.")
-    return config
+    # AES67-specific config handling has been removed from the service manager.
+    # AES67 is no longer treated as a managed systemd "service" here. If
+    # callers still need AES67 stream/config access, the API layer should
+    # handle it directly (file-backed). Return an empty config by default.
+    return {"streams": []}
 
 
 def __update_service_config_aes67(update_data: dict):
-    config_path = _services_config["aes67"]["config_path"]
-    config = {}
-    try:
-        with open(config_path, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if line and '=' in line:
-                    key, value = line.split('=', 1)
-                    config[key.strip()] = value.strip()
-    except FileNotFoundError:
-        logger.warning(f"Config file not found at {config_path}. A new one will be created.")
-
-    for key, value in update_data.items():
-        if key != "enabled":
-            config[key.upper()] = str(value)
-
-    with open(config_path, 'w') as f:
-        for key, value in config.items():
-            f.write(f"{key}={value}\n")
+    # AES67-specific config updates are intentionally not handled here anymore.
+    # The API layer should write AES67 stream lists/configs directly to the
+    # AES67 config file (JSON/YAML) as appropriate.
+    return
 
 def _read_shairport_config():
     """Reads shairport-sync configuration from a file."""
@@ -259,8 +233,7 @@ def _update_shairport_config(update_data: dict):
     _write_shairport_config(config)
 
 def _get_service_config(name: str):
-    if name == "aes67":
-        return _get_service_config_aes67()
+    # AES67 is no longer served from here
     if name == "airplay":
         return _filter_airplay_config(_read_shairport_config())
     if name == "bluetooth":
@@ -271,8 +244,6 @@ def _get_service_config(name: str):
 
 
 def __update_service_config(name: str, update_data: dict):
-    if name == "aes67":
-        __update_service_config_aes67(update_data)
     if name == "airplay":
         _update_shairport_config(update_data)
 

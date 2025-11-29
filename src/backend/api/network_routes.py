@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from core import network_manager
 import platform
+import os
 
 router = APIRouter()
 
@@ -45,6 +46,20 @@ class WifiConfig(BaseModel):
 async def get_ethernet_config():
     return network_manager.get_ethernet_config()
 
+    # --- New Endpoint for Network Interfaces ---
+
+@router.get("/interfaces")
+async def list_network_interfaces():
+    """Return a list of non-loopback network interface names available on the system."""
+    try:
+        # Prefer reading /sys/class/net which is available on Linux systems
+        if os.path.isdir('/sys/class/net'):
+            ifaces = [n for n in os.listdir('/sys/class/net') if n != 'lo']
+            return { 'interfaces': sorted(ifaces) }
+    except Exception:
+        pass
+    # Fallback: return a minimal set
+    return { 'interfaces': ['eth0', 'wlan0'] }
 @router.put("/config/ethernet")
 async def set_ethernet_config(config: EthernetStaticConfig):
     result = network_manager.set_ethernet_config(config)
