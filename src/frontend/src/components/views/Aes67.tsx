@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'preact/hooks';
-import { FiPlay, FiSquare, FiTrash2, FiEdit2, FiX } from 'react-icons/fi';
+import { FiPlay, FiSquare, FiTrash2, FiEdit2, FiX, FiCheck } from 'react-icons/fi';
 import { GiSoundWaves } from 'react-icons/gi';
 import { BsEthernet } from 'react-icons/bs';
 import './Aes67.css';
@@ -168,18 +168,16 @@ export function Aes67() {
                                   </>
                                 ) : (
                                   <div className="editor-inline">
-                                    <select value={s.mode || 'output'} onChange={async (e) => {
+                                    <select value={s.mode || 'output'} onChange={(e) => {
                                       const val = (e.target as HTMLSelectElement).value as 'input' | 'output';
                                       updateStreamField(i, { mode: val });
-                                      await patchStreamObj({ ...s, mode: val } as Stream);
                                     }} autoFocus onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
                                       <option value="input">Input (Capture)</option>
                                       <option value="output">Output (Receive)</option>
                                     </select>
-                                    <select value={s.net_device || ''} onChange={async (e) => {
+                                    <select value={s.net_device || ''} onChange={(e) => {
                                       const val = (e.target as HTMLSelectElement).value;
                                       updateStreamField(i, { net_device: val });
-                                      await patchStreamObj({ ...s, net_device: val } as Stream);
                                     }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
                                       <option value="">(none)</option>
                                       {netDevices.map(d => <option key={d} value={d}>{d}</option>)}
@@ -187,11 +185,10 @@ export function Aes67() {
                                     <input className="inline-input" type="text" value={`${s.addr}:${s.port}`} onInput={(e) => {
                                       const [a, p] = (e.target as HTMLInputElement).value.split(':');
                                       updateStreamField(i, { addr: a || '', port: p ? Number(p) : '' });
-                                    }} onBlur={() => { void patchStreamObj(editStreams![i]); }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }} />
-                                    <select value={s.hw_device || ''} onChange={async (e) => {
+                                    }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }} />
+                                    <select value={s.hw_device || ''} onChange={(e) => {
                                       const val = (e.target as HTMLSelectElement).value;
                                       updateStreamField(i, { hw_device: val });
-                                      await patchStreamObj({ ...s, hw_device: val } as Stream);
                                     }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
                                       <option value="">(none)</option>
                                       { (s.mode === 'input' ? soundInputs : soundOutputs).map((d:any) => (
@@ -202,9 +199,26 @@ export function Aes67() {
                                 )}
                               </div>
                               <div className="stream-right">
-                                <button className="icon-button edit" onClick={() => toggleEdit(s.id)} title={isEditing(s.id) ? 'Close' : 'Edit'}>
-                                  {isEditing(s.id) ? <FiX /> : <FiEdit2 />}
-                                </button>
+                                {!isEditing(s.id) ? (
+                                  <button className="icon-button edit" onClick={() => toggleEdit(s.id)} title="Edit">
+                                    <FiEdit2 />
+                                  </button>
+                                ) : (
+                                  <>
+                                    <button className="icon-button approve" onClick={() => {
+                                      void patchStreamObj(editStreams![i]);
+                                      toggleEdit(s.id);
+                                    }} title="Apply changes">
+                                      <FiCheck />
+                                    </button>
+                                    <button className="icon-button cancel" onClick={() => {
+                                      handleReset();
+                                      toggleEdit(s.id);
+                                    }} title="Cancel">
+                                      <FiX />
+                                    </button>
+                                  </>
+                                )}
                                 <button className="delete-button" onClick={async () => {
                                   const updated = [...(editStreams || [])];
                                   updated.splice(i, 1);
@@ -263,18 +277,16 @@ export function Aes67() {
                                   </>
                                 ) : (
                                   <div className="editor-inline">
-                                    <select value={s.mode || 'output'} onChange={async (e) => {
+                                    <select value={s.mode || 'output'} onChange={(e) => {
                                       const val = (e.target as HTMLSelectElement).value as 'input' | 'output';
                                       updateStreamField(i, { mode: val });
-                                      await patchStreamObj({ ...s, mode: val } as Stream);
                                     }} autoFocus onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
                                       <option value="input">Input (Capture)</option>
                                       <option value="output">Output (Receive)</option>
                                     </select>
-                                    <select value={s.net_device || ''} onChange={async (e) => {
+                                    <select value={s.net_device || ''} onChange={(e) => {
                                       const val = (e.target as HTMLSelectElement).value;
                                       updateStreamField(i, { net_device: val });
-                                      await patchStreamObj({ ...s, net_device: val } as Stream);
                                     }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
                                       <option value="">(none)</option>
                                       {netDevices.map(d => <option key={d} value={d}>{d}</option>)}
@@ -282,11 +294,10 @@ export function Aes67() {
                                     <input className="inline-input" type="text" value={`${s.addr}:${s.port}`} onInput={(e) => {
                                       const [a, p] = (e.target as HTMLInputElement).value.split(':');
                                       updateStreamField(i, { addr: a || '', port: p ? Number(p) : '' });
-                                    }} onBlur={() => { void patchStreamObj(editStreams![i]); }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }} />
-                                    <select value={s.hw_device || ''} onChange={async (e) => {
+                                    }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }} />
+                                    <select value={s.hw_device || ''} onChange={(e) => {
                                       const val = (e.target as HTMLSelectElement).value;
                                       updateStreamField(i, { hw_device: val });
-                                      await patchStreamObj({ ...s, hw_device: val } as Stream);
                                     }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
                                       <option value="">(none)</option>
                                       { (s.mode === 'input' ? soundInputs : soundOutputs).map((d:any) => (
@@ -297,9 +308,26 @@ export function Aes67() {
                                 )}
                               </div>
                               <div className="stream-right">
-                                <button className="icon-button edit" onClick={() => toggleEdit(s.id)} title={isEditing(s.id) ? 'Close' : 'Edit'}>
-                                  {isEditing(s.id) ? <FiX /> : <FiEdit2 />}
-                                </button>
+                                {!isEditing(s.id) ? (
+                                  <button className="icon-button edit" onClick={() => toggleEdit(s.id)} title="Edit">
+                                    <FiEdit2 />
+                                  </button>
+                                ) : (
+                                  <>
+                                    <button className="icon-button approve" onClick={() => {
+                                      void patchStreamObj(editStreams![i]);
+                                      toggleEdit(s.id);
+                                    }} title="Apply changes">
+                                      <FiCheck />
+                                    </button>
+                                    <button className="icon-button cancel" onClick={() => {
+                                      handleReset();
+                                      toggleEdit(s.id);
+                                    }} title="Cancel">
+                                      <FiX />
+                                    </button>
+                                  </>
+                                )}
                                 <button className="delete-button" onClick={async () => {
                                   const updated = [...(editStreams || [])];
                                   updated.splice(i, 1);

@@ -114,19 +114,6 @@ def get_service_by_name(name: str):
         }
     return None
 
-def _get_service_config_aes67():
-    # AES67-specific config handling has been removed from the service manager.
-    # AES67 is no longer treated as a managed systemd "service" here. If
-    # callers still need AES67 stream/config access, the API layer should
-    # handle it directly (file-backed). Return an empty config by default.
-    return {"streams": []}
-
-
-def __update_service_config_aes67(update_data: dict):
-    # AES67-specific config updates are intentionally not handled here anymore.
-    # The API layer should write AES67 stream lists/configs directly to the
-    # AES67 config file (JSON/YAML) as appropriate.
-    return
 
 def _read_shairport_config():
     """Reads shairport-sync configuration from a file."""
@@ -233,7 +220,6 @@ def _update_shairport_config(update_data: dict):
     _write_shairport_config(config)
 
 def _get_service_config(name: str):
-    # AES67 is no longer served from here
     if name == "airplay":
         return _filter_airplay_config(_read_shairport_config())
     if name == "bluetooth":
