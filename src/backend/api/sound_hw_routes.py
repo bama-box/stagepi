@@ -24,7 +24,7 @@ from core import sound_hw_manager
 router = APIRouter()
 
 
-@router.get("/input", summary="Get available sound input devices", tags=["Sound Input"])
+@router.get("/input", summary="Get available sound input devices", tags=["Sound"])
 async def get_sound_inputs():
     """
     Retrieves a list of available sound input (capture) devices.
@@ -33,7 +33,7 @@ async def get_sound_inputs():
     return {"inputs": devices}
 
 
-@router.get("/output", summary="Get available sound output devices", tags=["Sound Output"])
+@router.get("/output", summary="Get available sound output devices", tags=["Sound"])
 async def get_sound_outputs():
     """
     Retrieves a list of available sound output (playback) devices.

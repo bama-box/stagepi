@@ -4,13 +4,25 @@ from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from contextlib import asynccontextmanager
 import os
 from api import system_routes, network_routes, services_routes, sound_hw_routes, streams_routes
+from core import stream_manager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize and start all enabled streams
+    stream_manager.initialize_streams(provider='aes67')
+    yield
+    # Shutdown: Stop all running streams
+    stream_manager.shutdown_gstreamer_manager()
+
 # Create the main FastAPI application instance
 app = FastAPI(
     title="StagePi WebUI and API",
     description="WebUI and API for controlling and monitoring StagePi",
     version="1.0.0",
+    lifespan=lifespan,
 )
 # cors
 origins = [
