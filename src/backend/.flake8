@@ -1,0 +1,31 @@
+[flake8]
+# Flake8 configuration for StagePi backend
+
+max-line-length = 127
+max-complexity = 10
+
+# Exclude directories
+exclude =
+    .git,
+    __pycache__,
+    venv,
+    env,
+    .venv,
+    dist,
+    build,
+    *.egg-info,
+    htmlcov,
+    .pytest_cache,
+    .coverage
+
+# Ignore specific warnings
+ignore =
+    # E203: whitespace before ':' (conflicts with black)
+    E203,
+    # W503: line break before binary operator (conflicts with black)
+    W503
+
+# Count errors
+count = True
+statistics = True
+show-source = True

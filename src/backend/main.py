@@ -6,8 +6,15 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 import os
-from api import system_routes, network_routes, services_routes, sound_hw_routes, streams_routes
+from api import (
+    system_routes,
+    network_routes,
+    services_routes,
+    sound_hw_routes,
+    streams_routes
+)
 from core import stream_manager
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -61,6 +68,8 @@ app.mount(
 # This is the catch-all route for your Single Page Application (SPA)
 # It ensures that any request not matching an API route or a static file
 # will serve the main index.html file. This is crucial for client-side routing.
+
+
 @app.get("/{full_path:path}", include_in_schema=False)
 async def serve_frontend(full_path: str):
     index_path = os.path.join(UI_BUILD_DIR, "index.html")

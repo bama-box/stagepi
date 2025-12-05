@@ -1,17 +1,17 @@
 """
 Unit tests for streams API routes.
 """
-import pytest
-from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
 import sys
 import os
 
 # Add parent directory to path to import modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from main import app
-from core import stream_manager
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from unittest.mock import patch, MagicMock  # noqa: E402
+
+from main import app  # noqa: E402
 
 
 @pytest.fixture

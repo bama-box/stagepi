@@ -29,7 +29,7 @@ from dataclasses import dataclass
 import gi
 gi.require_version('Gst', '1.0')
 gi.require_version('GLib', '2.0')
-from gi.repository import Gst, GLib
+from gi.repository import Gst, GLib  # noqa: E402
 
 # Initialize GStreamer immediately
 Gst.init(None)
@@ -40,20 +40,22 @@ logger = logging.getLogger(__name__)
 # GStreamer AES67 Stream Classes
 # ==========================================
 
+
 @dataclass
 class StreamConfig:
     stream_id: str
     kind: Literal['sender', 'receiver']
-    ip: str              # Multicast Group IP (e.g. 239.69.0.1)
-    port: int            # RTP Port (e.g. 5004)
-    device: str          # ALSA Device (e.g. 'hw:0,0' or 'default')
-    iface: str           # Network Interface (e.g. 'eth0')
+    ip: str  # Multicast Group IP (e.g. 239.69.0.1)
+    port: int  # RTP Port (e.g. 5004)
+    device: str  # ALSA Device (e.g. 'hw:0,0' or 'default')
+    iface: str  # Network Interface (e.g. 'eth0')
     channels: int = 2
-    loopback: bool = False # Set True if testing on same machine
+    loopback: bool = False  # Set True if testing on same machine
     buffer_time: int = 100000  # in microseconds
-    latency_time: int = 5000000 # in microseconds
-    sync: bool = False   # AES67 recommends sync=false for senders
+    latency_time: int = 5000000  # in microseconds
+    sync: bool = False  # AES67 recommends sync=false for senders
     format: str = 'S24BE'  # Audio format (S16LE, S24LE, S24BE, S32LE, etc.)
+
 
 class AES67Stream:
     def __init__(self, config: StreamConfig):
@@ -82,7 +84,7 @@ class AES67Stream:
             )
 
         elif c.kind == 'receiver':
-            # Updated receiver to handle S24BE input if needed, 
+            # Updated receiver to handle S24BE input if needed,
             # though usually depayloader handles this automatically.
             return (
                 f"udpsrc address={c.ip} port={c.port} "
@@ -93,7 +95,7 @@ class AES67Stream:
                 "audioconvert ! "
                 f"alsasink device={c.device}"
             )
-        
+
         else:
             raise ValueError(f"Unknown stream kind: {c.kind}")
 
@@ -173,13 +175,26 @@ class AES67Stream:
 
             # Common error mappings to user-friendly messages
             if "device is being used by another application" in error_text.lower():
-                return f"Audio device '{self.config.device}' is currently in use by another application"
+                return (
+                    f"Audio device '{self.config.device}' is currently in use "
+                    "by another application"
+                )
             elif "could not open audio device" in error_text.lower():
-                return f"Could not open audio device '{self.config.device}'. Check if device exists and permissions are correct"
+                return (
+                    f"Could not open audio device '{self.config.device}'. "
+                    "Check if device exists and permissions are correct"
+                )
             elif "no such device" in error_text.lower() or "no such file" in error_text.lower():
-                return f"Audio device '{self.config.device}' not found. Use 'arecord -l' or 'aplay -l' to list available devices"
+                return (
+                    f"Audio device '{self.config.device}' not found. "
+                    "Use 'arecord -l' or 'aplay -l' to list available devices"
+                )
             elif "not-negotiated" in str(debug).lower():
-                return f"Audio format negotiation failed on device '{self.config.device}'. Device may not support the requested format ({self.config.format}, 48kHz, {self.config.channels} channels)"
+                return (
+                    f"Audio format negotiation failed on device '{self.config.device}'. "
+                    f"Device may not support the requested format "
+                    f"({self.config.format}, 48kHz, {self.config.channels} channels)"
+                )
 
             # Return original error with debug info if available
             if debug and len(debug) < 200:
@@ -257,6 +272,7 @@ class AES67Stream:
             err, debug = message.parse_warning()
             logger.warning(f"Stream Warning [{self.config.stream_id}]: {err}")
 
+
 class GStreamerStreamManager:
     """
     Manages the lifecycle of active GStreamer-based AES67 streams.
@@ -317,9 +333,11 @@ class GStreamerStreamManager:
             self.stop_stream(sid)
         self.loop.quit()
 
+
 # Global GStreamer Stream Manager instance
 _gstreamer_manager: Optional[GStreamerStreamManager] = None
 _startup_failed_streams: List[Dict[str, Any]] = []
+
 
 def get_gstreamer_manager() -> GStreamerStreamManager:
     """Get or create the global GStreamer stream manager instance."""
@@ -328,6 +346,7 @@ def get_gstreamer_manager() -> GStreamerStreamManager:
         _gstreamer_manager = GStreamerStreamManager()
     return _gstreamer_manager
 
+
 def shutdown_gstreamer_manager():
     """Shutdown the global GStreamer stream manager."""
     global _gstreamer_manager
@@ -335,14 +354,17 @@ def shutdown_gstreamer_manager():
         _gstreamer_manager.stop_all()
         _gstreamer_manager = None
 
+
 def get_startup_failed_streams() -> List[Dict[str, Any]]:
     """Get the list of streams that failed to start during application startup."""
     global _startup_failed_streams
     return _startup_failed_streams.copy()
 
+
 # ==========================================
 # Stream Configuration Management
 # ==========================================
+
 
 # Map provider name -> JSON config path.
 _provider_config_map = {
@@ -408,18 +430,11 @@ def _sync_stream_to_gstreamer(stream_data: Dict[str, Any]):
             try:
                 manager.create_stream(config)
             except Exception as e:
-                error_details = {
-                    'stream_id': stream_id,
-                    'kind': config.kind,
-                    'device': config.device,
-                    'ip': config.ip,
-                    'port': config.port,
-                    'error': str(e)
-                }
                 logger.error(f"Failed to start stream {stream_id}: {e}")
                 # Re-raise with detailed error message
                 raise RuntimeError(
-                    f"Failed to start {config.kind} stream '{stream_id}' on device '{config.device}': {str(e)}"
+                    f"Failed to start {config.kind} stream '{stream_id}' "
+                    f"on device '{config.device}': {str(e)}"
                 ) from e
         else:
             logger.warning(f"Cannot start stream {stream_id}: Invalid configuration")
