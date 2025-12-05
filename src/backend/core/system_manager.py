@@ -16,13 +16,15 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-# core/system_manager.py
-import time
-import socket
-import psutil
-import subprocess
 import os
 import re
+import socket
+import subprocess
+
+# core/system_manager.py
+import time
+
+import psutil
 
 LED_PATHS = {
     "ACT": {

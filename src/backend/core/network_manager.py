@@ -16,8 +16,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
-import subprocess
 import logging
+import subprocess
 
 # --- Configure Logging ---
 # This sets up basic logging to print INFO level messages and higher to the console.

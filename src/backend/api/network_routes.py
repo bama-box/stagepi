@@ -16,13 +16,15 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
+import os
+import platform
+from typing import List, Optional
+
 # api/network_routes.py
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import List, Optional
+
 from core import network_manager
-import platform
-import os
 
 router = APIRouter()
 

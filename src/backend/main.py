@@ -1,17 +1,19 @@
 # main.py
 # uvicorn main:app --reload --host 0.0.0.0 --port 8000
+import os
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from contextlib import asynccontextmanager
-import os
+from fastapi.staticfiles import StaticFiles
+
 from api import (
-    system_routes,
     network_routes,
     services_routes,
     sound_hw_routes,
     streams_routes,
+    system_routes,
 )
 from core import stream_manager
 

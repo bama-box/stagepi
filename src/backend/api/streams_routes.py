@@ -6,9 +6,11 @@ provider is 'aes67' which maps to /usr/local/stagepi/etc/aes67.json. Other
 providers can be added by extending the stream_manager module.
 """
 
+from typing import Any, List, Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
-from typing import Optional, List, Any
+
 from core import stream_manager
 
 router = APIRouter()

@@ -16,9 +16,10 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
+import re
+
 # core/sound_hw_manager.py
 import subprocess
-import re
 
 
 def _parse_alsa_list(output: str):

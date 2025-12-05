@@ -16,21 +16,22 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
+import json
+import logging
+
 # core/stream_manager.py
 import os
-import json
-import uuid
-import logging
 import threading
-from typing import Optional, List, Dict, Any, Literal
+import uuid
 from dataclasses import dataclass
+from typing import Any, Dict, List, Literal, Optional
 
 # GStreamer Imports
 import gi
 
 gi.require_version("Gst", "1.0")
 gi.require_version("GLib", "2.0")
-from gi.repository import Gst, GLib  # noqa: E402
+from gi.repository import GLib, Gst  # noqa: E402
 
 # Initialize GStreamer immediately
 Gst.init(None)

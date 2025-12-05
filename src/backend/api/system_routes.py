@@ -17,9 +17,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # api/system_routes.py
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+
 from core import system_manager
-from fastapi import HTTPException
 
 # Create a new router object
 router = APIRouter()
