@@ -27,6 +27,7 @@ from typing import List, Any
 
 router = APIRouter()
 
+
 class ServiceUpdateRequest(BaseModel):
     enabled: Optional[bool] = None
     host: Optional[str] = None
@@ -54,24 +55,32 @@ class StreamsUpdateRequest(BaseModel):
 async def get_all_services():
     return service_manager.get_all_services()
 
+
 @router.get("/{service_name}")
 async def get_service(service_name: str):
     service = service_manager.get_service_by_name(service_name)
     if not service:
-        raise HTTPException(status_code=404, detail=f"Service '{service_name}' not found.")
+        raise HTTPException(
+            status_code=404, detail=f"Service '{service_name}' not found."
+        )
     return service
 
 
 # AES67 stream management moved to the /streams API module.
 # For backwards compatibility the service endpoints do not expose AES67 streams anymore.
 
+
 @router.patch("/{service_name}")
 async def update_service(service_name: str, update_request: ServiceUpdateRequest):
     update_data = update_request.dict(exclude_unset=True)
     if not update_data:
-        raise HTTPException(status_code=400, detail="At least one field to update must be provided.")
+        raise HTTPException(
+            status_code=400, detail="At least one field to update must be provided."
+        )
 
     updated_service = service_manager.update_service(service_name, update_data)
     if not updated_service:
-        raise HTTPException(status_code=404, detail=f"Service '{service_name}' not found.")
+        raise HTTPException(
+            status_code=404, detail=f"Service '{service_name}' not found."
+        )
     return updated_service

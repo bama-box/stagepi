@@ -27,13 +27,14 @@ import re
 LED_PATHS = {
     "ACT": {
         "trigger": "/sys/class/leds/ACT/trigger",
-        "brightness": "/sys/class/leds/ACT/brightness"
+        "brightness": "/sys/class/leds/ACT/brightness",
     },
     "PWR": {
         "trigger": "/sys/class/leds/PWR/trigger",
-        "brightness": "/sys/class/leds/PWR/brightness"
-    }
+        "brightness": "/sys/class/leds/PWR/brightness",
+    },
 }
+
 
 def get_led_state():
     """
@@ -49,10 +50,10 @@ def get_led_state():
         try:
             with open(paths["trigger"], "r") as f:
                 trigger_raw = f.read()
-            match = re.search(r'\[([\w-]+)\]', trigger_raw)
+            match = re.search(r"\[([\w-]+)\]", trigger_raw)
             if match:
                 triggers = match.group(1)
-            else: 
+            else:
                 triggers = None
             # Detect state
             if "heartbeat" in triggers:
@@ -64,7 +65,11 @@ def get_led_state():
                     try:
                         with open(paths["brightness"], "r") as bf:
                             brightness_val = bf.read().strip()
-                            brightness = int(brightness_val) if brightness_val.isdigit() else None
+                            brightness = (
+                                int(brightness_val)
+                                if brightness_val.isdigit()
+                                else None
+                            )
                     except Exception:
                         brightness = None
                 if brightness > 0:
@@ -80,6 +85,7 @@ def get_led_state():
         except Exception as e:
             states[led] = {"available": False, "error": str(e)}
     return states
+
 
 def set_led_state(action: str, led_name: str = None) -> dict:
     """
@@ -101,18 +107,24 @@ def set_led_state(action: str, led_name: str = None) -> dict:
 
         try:
             if action == "blink":
-                subprocess.run(["sudo", "tee", paths["trigger"]], input=b"heartbeat\n", check=True)
+                subprocess.run(
+                    ["sudo", "tee", paths["trigger"]], input=b"heartbeat\n", check=True
+                )
             elif action in ("on", "off"):
-                subprocess.run(["sudo", "tee", paths["trigger"]], input=b"none\n", check=True)
+                subprocess.run(
+                    ["sudo", "tee", paths["trigger"]], input=b"none\n", check=True
+                )
                 if os.path.exists(paths["brightness"]):
                     value = b"1\n" if action == "on" else b"0\n"
-                    subprocess.run(["sudo", "tee", paths["brightness"]], input=value, check=True)
+                    subprocess.run(
+                        ["sudo", "tee", paths["brightness"]], input=value, check=True
+                    )
 
             # Get the new state after setting it
             with open(paths["trigger"], "r") as f:
                 trigger_raw = f.read()
-            
-            match = re.search(r'\[([\w-]+)\]', trigger_raw)
+
+            match = re.search(r"\[([\w-]+)\]", trigger_raw)
             triggers = match.group(1) if match else None
 
             # Detect final state
@@ -135,7 +147,9 @@ def set_led_state(action: str, led_name: str = None) -> dict:
 
     return result
 
+
 VERSION_FILE_PATH = "/usr/local/stagepi/version"
+
 
 def get_status():
     """
@@ -143,21 +157,21 @@ def get_status():
     """
     hostname = socket.gethostname()
     mac_address = "00:00:00:00:00:00"  # Default fallback
-    ip_address = "Not found"          # Default fallback
+    ip_address = "Not found"  # Default fallback
 
     # --- Find MAC and IP Address ---
     try:
         addrs = psutil.net_if_addrs()
-        
+
         # Use eth0 MAC address as the unique deviceId
-        if 'eth0' in addrs:
-            for addr in addrs['eth0']:
+        if "eth0" in addrs:
+            for addr in addrs["eth0"]:
                 if addr.family == psutil.AF_LINK:
                     mac_address = addr.address
                     break
 
         # Find IP address, preferring eth0 then wlan0
-        preferred_interfaces = ['eth0', 'wlan0']
+        preferred_interfaces = ["eth0", "wlan0"]
         for interface in preferred_interfaces:
             if interface in addrs:
                 for addr in addrs[interface]:
@@ -166,21 +180,21 @@ def get_status():
                         break  # Stop after finding the first IPv4 address
             if ip_address != "Not found":
                 break  # Stop if we've found an IP on a preferred interface
-                
+
     except Exception as e:
         print(f"Could not get network information: {e}")
 
     # --- Read Firmware Version ---
     firmware_version = "unknown"
     try:
-        with open(VERSION_FILE_PATH, 'r') as f:
+        with open(VERSION_FILE_PATH, "r") as f:
             firmware_version = f.read().strip()
     except FileNotFoundError:
         print(f"Version file not found at: {VERSION_FILE_PATH}")
     except Exception as e:
         print(f"Error reading version file: {e}")
     return {
-        "deviceId": mac_address.replace(':', ''),
+        "deviceId": mac_address.replace(":", ""),
         "hostname": hostname,
         "status": "configured",
         "ipAddress": ip_address,
@@ -188,31 +202,32 @@ def get_status():
         "firmwareVersion": firmware_version,
     }
 
+
 def get_resources():
     """
     Gathers core system resource metrics with real disk usage.
     """
-    disk_usage = psutil.disk_usage('/')
-    bytes_to_gb = 1024 ** 3
+    disk_usage = psutil.disk_usage("/")
+    bytes_to_gb = 1024**3
 
     return {
         "cpu": {
             "usage": psutil.cpu_percent(interval=1),
             "temperature": {
                 "value": 45.2,  # Placeholder for Pi-specific temp sensor
-                "unit": "celsius"
-            }
+                "unit": "celsius",
+            },
         },
         "memory": {
             "total": int(psutil.virtual_memory().total / (1024 * 1024)),
             "used": int(psutil.virtual_memory().used / (1024 * 1024)),
-            "unit": "MB"
+            "unit": "MB",
         },
         "disk": {
             "total": round(disk_usage.total / bytes_to_gb, 2),
             "used": round(disk_usage.used / bytes_to_gb, 2),
             "usage": disk_usage.percent,
-            "unit": "GB"
+            "unit": "GB",
         },
-        "uptime": int(time.time() - psutil.boot_time())
+        "uptime": int(time.time() - psutil.boot_time()),
     }

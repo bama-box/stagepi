@@ -11,7 +11,7 @@ from api import (
     network_routes,
     services_routes,
     sound_hw_routes,
-    streams_routes
+    streams_routes,
 )
 from core import stream_manager
 
@@ -19,10 +19,11 @@ from core import stream_manager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Initialize and start all enabled streams
-    stream_manager.initialize_streams(provider='aes67')
+    stream_manager.initialize_streams(provider="aes67")
     yield
     # Shutdown: Stop all running streams
     stream_manager.shutdown_gstreamer_manager()
+
 
 # Create the main FastAPI application instance
 app = FastAPI(
@@ -62,7 +63,7 @@ UI_BUILD_DIR = os.path.join(os.path.dirname(__file__), "dist")
 app.mount(
     "/assets",
     StaticFiles(directory=os.path.join(UI_BUILD_DIR, "assets")),
-    name="assets"
+    name="assets",
 )
 
 # This is the catch-all route for your Single Page Application (SPA)

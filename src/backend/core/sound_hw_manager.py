@@ -27,13 +27,15 @@ def _parse_alsa_list(output: str):
     Expected lines like: "card 0: PCH [HDA Intel PCH], device 0: ALC255 Analog [ALC255 Analog]"
     """
     devices = []
-    card_matches = re.findall(r'^card (\d+): (.*?) \[(.*?)\], device.*', output, re.M)
+    card_matches = re.findall(r"^card (\d+): (.*?) \[(.*?)\], device.*", output, re.M)
     for card_num, card_name, card_id in card_matches:
-        devices.append({
-            "card_number": int(card_num),
-            "card_name": card_name.strip(),
-            "card_id": card_id.strip()
-        })
+        devices.append(
+            {
+                "card_number": int(card_num),
+                "card_name": card_name.strip(),
+                "card_id": card_id.strip(),
+            }
+        )
     return devices
 
 
@@ -74,7 +76,7 @@ def get_sound_hw():
     return get_sound_outputs()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # For quick local testing
     outputs = get_sound_outputs()
     inputs = get_sound_inputs()

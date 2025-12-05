@@ -1,4 +1,3 @@
-
 """
 Stage Pi: Open source stagebox firmware
 
@@ -16,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
+
 # api/system_routes.py
 from fastapi import APIRouter
 from core import system_manager
@@ -23,6 +23,7 @@ from fastapi import HTTPException
 
 # Create a new router object
 router = APIRouter()
+
 
 @router.get("/status")
 async def get_system_status():
@@ -32,6 +33,7 @@ async def get_system_status():
     status_data = system_manager.get_status()
     return status_data
 
+
 @router.get("/resources")
 async def get_system_resources():
     """
@@ -39,6 +41,7 @@ async def get_system_resources():
     """
     resource_data = system_manager.get_resources()
     return resource_data
+
 
 # --- LED Control Endpoints ---
 @router.get("/led")
@@ -51,6 +54,7 @@ async def get_led_state():
         raise HTTPException(status_code=404, detail="LEDs not available")
     return result
 
+
 @router.put("/led")
 async def set_led_state(action: str, led: str = None):
     """
@@ -59,9 +63,13 @@ async def set_led_state(action: str, led: str = None):
     If led is not provided, controls all available LEDs.
     """
     if led and led not in ["ACT", "PWR"]:
-        raise HTTPException(status_code=400, detail="Invalid LED specified. Must be 'ACT' or 'PWR'")
+        raise HTTPException(
+            status_code=400, detail="Invalid LED specified. Must be 'ACT' or 'PWR'"
+        )
     if action not in ["on", "off", "blink"]:
-        raise HTTPException(status_code=400, detail="Invalid action. Must be 'on', 'off', or 'blink'")
+        raise HTTPException(
+            status_code=400, detail="Invalid action. Must be 'on', 'off', or 'blink'"
+        )
 
     result = system_manager.set_led_state(action, led)
     if result is None:

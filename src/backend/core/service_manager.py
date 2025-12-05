@@ -1,4 +1,3 @@
-
 """
 Stage Pi: Open source stagebox firmware
 
@@ -16,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
+
 # core/service_manager.py
 import subprocess
 import logging
@@ -31,15 +31,18 @@ _services_config = {
     "bluetooth": {
         "description": "Manages the Bluetooth radio.",
         "service_name": "bluetooth.service",
-        "config_path": "/usr/local/stagepi/etc/bluetooth.env" },
+        "config_path": "/usr/local/stagepi/etc/bluetooth.env",
+    },
     "a2dp": {
         "description": "Enables high-quality audio streaming (A2DP Sink).",
         "service_name": "btaudio.service",
-        "config_path": "/usr/local/stagepi/etc/a2dp.env"},
+        "config_path": "/usr/local/stagepi/etc/a2dp.env",
+    },
     "airplay": {
         "description": "Enables the AirPlay audio streaming service.",
         "service_name": "shairport-sync.service",
-        "config_path": "/etc/shairport-sync.conf"},
+        "config_path": "/etc/shairport-sync.conf",
+    },
 }
 
 # A mock for systems without systemd, providing a fallback state.
@@ -50,6 +53,7 @@ _services_mock_state = {
 }
 
 logger = logging.getLogger(__name__)
+
 
 def _run_systemctl(args):
     """Helper to run a systemctl command and handle errors."""
@@ -62,12 +66,13 @@ def _run_systemctl(args):
             check=False,
         )
         if "does not exist" in proc.stderr:
-             logger.warning(f"Service not found for command: {' '.join(command)}")
-             return None
+            logger.warning(f"Service not found for command: {' '.join(command)}")
+            return None
         return proc
     except FileNotFoundError:
         logger.warning("'systemctl' command not found. Using mock data.")
         return None
+
 
 def _get_service_state(service_name: str):
     """Gets the enabled and active state of a systemd service."""
@@ -76,7 +81,9 @@ def _get_service_state(service_name: str):
 
     if proc_enabled is None or proc_active is None:
         logger.warning(f"Falling back to mock state for {service_name}")
-        return _services_mock_state.get(service_name, {"enabled": False, "active": False})
+        return _services_mock_state.get(
+            service_name, {"enabled": False, "active": False}
+        )
 
     # `is-enabled` has an exit code of 0 if enabled.
     enabled = proc_enabled.returncode == 0
@@ -92,13 +99,16 @@ def get_all_services():
     for name, service_config in _services_config.items():
         state = _get_service_state(service_config["service_name"])
         config = _get_service_config(name)
-        services_with_status.append({
-            "name": name,
-            "description": service_config["description"],
-            "config": config,
-            **state
-        })
+        services_with_status.append(
+            {
+                "name": name,
+                "description": service_config["description"],
+                "config": config,
+                **state,
+            }
+        )
     return services_with_status
+
 
 def get_service_by_name(name: str):
     logger.info(f"CORE: Getting service '{name}'...")
@@ -110,7 +120,7 @@ def get_service_by_name(name: str):
             "name": name,
             "description": service_config["description"],
             "config": config,
-            **state
+            **state,
         }
     return None
 
@@ -120,11 +130,12 @@ def _read_shairport_config():
     config_path = _services_config["airplay"]["config_path"]
     config = None
     try:
-        with open(config_path, 'r') as f:
+        with open(config_path, "r") as f:
             config = libconf.load(f)
     except Exception as e:
         print(f"Error reading or parsing config file: {e}")
     return config
+
 
 '''
 def _write_shairport_config(config):
@@ -137,6 +148,7 @@ def _write_shairport_config(config):
         print(f"Error writing config file: {e}")
 '''
 
+
 def _write_shairport_config(config):
     """
     Writes config to a temporary file as a normal user, then uses
@@ -148,7 +160,9 @@ def _write_shairport_config(config):
     try:
         # 1. Create a temporary file in a location we have permission to write to.
         # 'delete=False' is crucial because we need to close it before moving.
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8', suffix=".conf") as temp_f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", delete=False, encoding="utf-8", suffix=".conf"
+        ) as temp_f:
             temp_path = temp_f.name
             libconf.dump(config, temp_f)
 
@@ -184,40 +198,42 @@ def _write_shairport_config(config):
             print(f"Cleaned up temporary file: {temp_path}")
 
 
-
 def _filter_airplay_config(config):
     filtered_config = {
-        "adv_name" : config['general']['name'],
-        "hw_device" : config['alsa']['output_device']
+        "adv_name": config["general"]["name"],
+        "hw_device": config["alsa"]["output_device"],
     }
     return filtered_config
+
 
 def _update_default_audio(value):
     config = _read_shairport_config()
     # set default audio output
-    config.setdefault('stagepi', {})
-    hw_device = config.get('stagepi', {}).get('output_device', "")
+    config.setdefault("stagepi", {})
+    hw_device = config.get("stagepi", {}).get("output_device", "")
     if hw_device == "Headphones":
         subprocess.run(["sudo", "raspi-config", "nonint", "do_audio", "1"], check=True)
     if "hdmi" in hw_device.lower():
         subprocess.run(["sudo", "raspi-config", "nonint", "do_audio", "2"], check=True)
+
 
 def _update_shairport_config(update_data: dict):
     """Updates shairport-sync configuration."""
     config = _read_shairport_config()
     if not config:
         config = {}
-    config['general']['output_backend'] = "pa"
+    config["general"]["output_backend"] = "pa"
 
     for key, value in update_data.items():
         logging.info(f"key:{key},value:{value}")
         if key == "adv_name":
-            config['general']['name'] = value
-        elif key == "hw_device":        
-            config.setdefault('stagepi', {})['output_device'] = value
+            config["general"]["name"] = value
+        elif key == "hw_device":
+            config.setdefault("stagepi", {})["output_device"] = value
         elif key == "enabled":
             _update_default_audio(value)
     _write_shairport_config(config)
+
 
 def _get_service_config(name: str):
     if name == "airplay":
@@ -243,7 +259,9 @@ def update_service(name: str, update_data: dict):
 
     if "enabled" in update_data:
         enabled = update_data["enabled"]
-        logger.info(f"CORE: Setting service '{name}' ({service_name}) to enabled={enabled}...")
+        logger.info(
+            f"CORE: Setting service '{name}' ({service_name}) to enabled={enabled}..."
+        )
         action = "enable" if enabled else "disable"
         __update_service_config(name, update_data)
 
@@ -254,9 +272,11 @@ def update_service(name: str, update_data: dict):
         if proc is None:
             logger.warning(f"Falling back to mock update for {service_name}")
             _services_mock_state[service_name]["enabled"] = enabled
-            _services_mock_state[service_name]["active"] = enabled # Mocking start/stop
+            _services_mock_state[service_name]["active"] = enabled  # Mocking start/stop
         elif proc.returncode != 0:
-            logger.error(f"Failed to run 'systemctl {' '.join(command_args)}': {proc.stderr.strip()}")
+            logger.error(
+                f"Failed to run 'systemctl {' '.join(command_args)}': {proc.stderr.strip()}"
+            )
 
     # After updating, return the new state of the service.
     return get_service_by_name(name)
