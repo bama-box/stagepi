@@ -28,6 +28,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
+        cache-dependency-path: 'src/backend/requirements-dev.txt'
 
     - name: Install system dependencies
       run: |
@@ -47,9 +48,8 @@ jobs:
       working-directory: ./src/backend
       run: |
         python -m pip install --upgrade pip
+        pip install -r requirements.txt
         pip install -r requirements-dev.txt
-        # Install production dependencies if they exist
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
     - name: Run linting
       working-directory: ./src/backend
@@ -89,6 +89,7 @@ jobs:
       with:
         python-version: '3.11'
         cache: 'pip'
+        cache-dependency-path: 'src/backend/requirements-dev.txt'
 
     - name: Install dependencies
       working-directory: ./src/backend

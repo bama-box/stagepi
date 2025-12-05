@@ -1,0 +1,13 @@
+# Production dependencies for StagePi backend
+
+# Web framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+
+# CORS middleware
+python-multipart==0.0.6
+
+# GStreamer Python bindings (system package, but listed for reference)
+# Install via: sudo apt-get install python3-gi gir1.2-gstreamer-1.0
+# PyGObject>=3.42.0
