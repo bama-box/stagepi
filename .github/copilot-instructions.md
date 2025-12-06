@@ -19,10 +19,12 @@ StagePi is an open-source digital stage box firmware for Raspberry Pi, focused o
   3. `npm install` in `src/frontend/`
   4. `npm run dev` to start the web UI
 - **Backend Development**:
-  1. Edit Python files in `src/backend/`. API routes are defined in `api/`, logic in `core/`.
-  2. Run `make format` to auto-format code with Ruff (required before committing)
-  3. Run `make test` to run unit tests
-  4. Run `make lint` to check for issues
+  1. All development happens in Docker ARM64 containers (matches Raspberry Pi environment)
+  2. Edit Python files in `src/backend/`. API routes are defined in `api/`, logic in `core/`.
+  3. Run `make test` to run unit tests in Docker
+  4. Run `make format` to auto-format code with Ruff (required before committing)
+  5. Run `make lint` to check for issues
+  6. Run `make docker-shell` for interactive development
 - **Deployment**: Use scripts in `scripts/` and `package/` for building and deploying Debian packages.
 
 ## Patterns & Conventions
@@ -32,6 +34,8 @@ StagePi is an open-source digital stage box firmware for Raspberry Pi, focused o
 - **Image Building**: Relies on pi-gen scripts and custom shell scripts for reproducible OS images.
 - **Wi-Fi Hotspot**: On first boot, device exposes a hotspot (`stagepi-[hostname]`) and web UI at `http://[hostname].local:8000`.
 - **Code Quality**: All Python code must be formatted and linted with Ruff before committing. Run `make format` in `src/backend/` to auto-fix issues.
+- **Development Environment**: Uses Docker ARM64 containers with all system dependencies (GStreamer, python3-fastapi, etc.) matching the Raspberry Pi.
+- **Deployment**: Raspberry Pi uses Debian system packages only (no pip/virtualenv). Dependencies defined in `src/stagepi-package/DEBIAN/control`.
 
 ## Integration Points
 - **Audio Hardware**: HiFiBerry HATs (DAC+ ADC Pro, Digi+ I/O) via ALSA/JACK/PipeWire.
@@ -51,19 +55,17 @@ All Python code **must** be formatted and linted with **Ruff** before committing
 - 10-100x faster than traditional Python tools
 - Configured in `src/backend/pyproject.toml`
 
-**Required Commands:**
+**Required Commands (all run in Docker):**
 ```bash
 cd src/backend
-make format  # Auto-fix all issues and format code
-make lint    # Check for remaining issues
-make test    # Run unit tests
+make format  # Auto-fix all issues and format code (runs in Docker)
+make lint    # Check for remaining issues (runs in Docker)
+make test    # Run unit tests (runs in Docker ARM64)
+make docker-shell  # Open interactive shell in ARM64 container
 ```
 
-**Direct Ruff Usage:**
-```bash
-ruff check --fix .  # Auto-fix linting issues
-ruff format .       # Format code
-```
+**Docker Development:**
+All commands run in ARM64 Docker containers that match the Raspberry Pi environment exactly, including GStreamer and all system dependencies.
 
 **Configuration:**
 - Line length: 127 characters
@@ -77,8 +79,9 @@ ruff format .       # Format code
 - ❌ isort
 
 **GitHub Actions:**
-- All PRs automatically run `ruff check` and `ruff format --check`
+- All PRs automatically run Docker-based tests and linting
 - Linting failures will block merging
+- Tests run in ARM64 containers with full GStreamer support
 
 ## Example: Adding a New API Route
 1. Define route in `src/backend/api/<domain>_routes.py`.

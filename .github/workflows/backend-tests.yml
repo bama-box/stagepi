@@ -15,66 +15,58 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.9', '3.10', '3.11']
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+    - name: Set up QEMU for ARM64 emulation
+      uses: docker/setup-qemu-action@v3
       with:
-        python-version: ${{ matrix.python-version }}
-        cache: 'pip'
-        cache-dependency-path: 'src/backend/requirements-dev.txt'
+        platforms: linux/arm64
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          gstreamer1.0-tools \
-          gstreamer1.0-plugins-base \
-          gstreamer1.0-plugins-good \
-          gstreamer1.0-plugins-bad \
-          gstreamer1.0-plugins-ugly \
-          gir1.2-gstreamer-1.0 \
-          gir1.2-gst-plugins-base-1.0 \
-          python3-gi \
-          python3-gi-cairo
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-    - name: Install Python dependencies
+    - name: Build Docker test image
       working-directory: ./src/backend
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
+        docker build --platform linux/arm64 -t stagepi-test -f Dockerfile.dev .
 
     - name: Run linting with Ruff
       working-directory: ./src/backend
       run: |
-        # Check for errors and style issues
-        ruff check .
-        # Check code formatting
-        ruff format --check .
+        docker run --rm --platform linux/arm64 \
+          -v "$(pwd):/app:ro" \
+          -e RUFF_CACHE_DIR=/tmp/ruff \
+          stagepi-test sh -c "python3 -m ruff check . && python3 -m ruff format --check ."
 
     - name: Run tests with pytest
       working-directory: ./src/backend
       run: |
-        pytest tests/ -v --cov=. --cov-report=xml --cov-report=term-missing
+        docker run --rm --platform linux/arm64 \
+          -v "$(pwd):/app:ro" \
+          stagepi-test python3 -m pytest tests/ -v --cov=. --cov-report=xml --cov-report=term-missing
+
+    - name: Extract coverage report
+      working-directory: ./src/backend
+      run: |
+        docker run --rm --platform linux/arm64 \
+          -v "$(pwd):/app" \
+          stagepi-test cp /app/coverage.xml /app/coverage.xml || true
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
         file: ./src/backend/coverage.xml
         flags: backend
-        name: backend-${{ matrix.python-version }}
+        name: backend-docker-arm64
         fail_ci_if_error: false
 
-    - name: Generate coverage report
-      if: matrix.python-version == '3.11'
+    - name: Generate coverage summary
       working-directory: ./src/backend
       run: |
-        coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
+        docker run --rm --platform linux/arm64 \
+          -v "$(pwd):/app:ro" \
+          stagepi-test python3 -m coverage report --format=markdown >> $GITHUB_STEP_SUMMARY || true
 
