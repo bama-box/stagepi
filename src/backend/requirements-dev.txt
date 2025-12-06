@@ -9,11 +9,11 @@ pytest-mock==3.12.0
 # FastAPI testing
 httpx==0.25.2
 
-# Code quality
-black==23.12.1
-flake8==6.1.0
+# Code quality - Ruff (replaces black, flake8, isort)
+ruff==0.1.9
+
+# Type checking
 mypy==1.7.1
-isort==5.13.2
 
 # Coverage reporting
 coverage[toml]==7.3.4

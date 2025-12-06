@@ -6,7 +6,7 @@ provider is 'aes67' which maps to /usr/local/stagepi/etc/aes67.json. Other
 providers can be added by extending the stream_manager module.
 """
 
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -25,12 +25,8 @@ class StreamModel(BaseModel):
     port: Optional[int] = None  # RTP port
     channels: Optional[int] = 2  # Number of audio channels
     loopback: Optional[bool] = False  # Loopback for testing
-    buffer_time: Optional[int] = (
-        100000  # ALSA buffer time in microseconds (default: 100ms)
-    )
-    latency_time: Optional[int] = (
-        5000000  # ALSA latency time in microseconds (default: 5000ms)
-    )
+    buffer_time: Optional[int] = 100000  # ALSA buffer time in microseconds (default: 100ms)
+    latency_time: Optional[int] = 5000000  # ALSA latency time in microseconds (default: 5000ms)
     sync: Optional[bool] = False  # AES67 recommends sync=false for senders
     enabled: Optional[bool] = True  # Enable/disable stream
     format: Optional[str] = "S24BE"  # Audio format (S16LE, S24LE, S24BE, S32LE, etc.)
@@ -41,7 +37,7 @@ class StreamModel(BaseModel):
 
 
 class StreamsUpdateRequest(BaseModel):
-    streams: List[StreamModel]
+    streams: list[StreamModel]
 
 
 @router.get("/streams")
@@ -65,9 +61,7 @@ async def add_stream(stream: StreamModel, provider: str = Query("aes67")):
 
 
 @router.patch("/streams/{stream_id}")
-async def update_stream(
-    stream_id: str, stream_update: StreamModel, provider: str = Query("aes67")
-):
+async def update_stream(stream_id: str, stream_update: StreamModel, provider: str = Query("aes67")):
     """Update an existing stream by ID."""
     try:
         update_dict = stream_update.to_dict()
@@ -92,9 +86,7 @@ async def delete_stream(stream_id: str, provider: str = Query("aes67")):
 
 
 @router.put("/streams")
-async def replace_streams(
-    streams_update: StreamsUpdateRequest, provider: str = Query("aes67")
-):
+async def replace_streams(streams_update: StreamsUpdateRequest, provider: str = Query("aes67")):
     """Replace all streams with a new list."""
     streams = [s.to_dict() for s in streams_update.streams]
     streams = stream_manager.replace_all_streams(streams, provider)
@@ -107,9 +99,7 @@ async def get_streams_status():
     manager = stream_manager.get_gstreamer_manager()
     streams_status = manager.get_all_streams_status()
 
-    running_count = sum(
-        1 for status in streams_status.values() if status.get("running", False)
-    )
+    running_count = sum(1 for status in streams_status.values() if status.get("running", False))
 
     return {
         "running_count": running_count,
@@ -125,9 +115,7 @@ async def get_stream_status(stream_id: str):
     status = manager.get_stream_status(stream_id)
 
     if status is None:
-        raise HTTPException(
-            status_code=404, detail=f"Stream {stream_id} not found or not running"
-        )
+        raise HTTPException(status_code=404, detail=f"Stream {stream_id} not found or not running")
 
     return status
 

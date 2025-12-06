@@ -50,7 +50,7 @@ def get_led_state():
             states[led] = {"available": False}
             continue
         try:
-            with open(paths["trigger"], "r") as f:
+            with open(paths["trigger"]) as f:
                 trigger_raw = f.read()
             match = re.search(r"\[([\w-]+)\]", trigger_raw)
             if match:
@@ -65,13 +65,9 @@ def get_led_state():
                 brightness = None
                 if os.path.exists(paths["brightness"]):
                     try:
-                        with open(paths["brightness"], "r") as bf:
+                        with open(paths["brightness"]) as bf:
                             brightness_val = bf.read().strip()
-                            brightness = (
-                                int(brightness_val)
-                                if brightness_val.isdigit()
-                                else None
-                            )
+                            brightness = int(brightness_val) if brightness_val.isdigit() else None
                     except Exception:
                         brightness = None
                 if brightness > 0:
@@ -109,21 +105,15 @@ def set_led_state(action: str, led_name: str = None) -> dict:
 
         try:
             if action == "blink":
-                subprocess.run(
-                    ["sudo", "tee", paths["trigger"]], input=b"heartbeat\n", check=True
-                )
+                subprocess.run(["sudo", "tee", paths["trigger"]], input=b"heartbeat\n", check=True)
             elif action in ("on", "off"):
-                subprocess.run(
-                    ["sudo", "tee", paths["trigger"]], input=b"none\n", check=True
-                )
+                subprocess.run(["sudo", "tee", paths["trigger"]], input=b"none\n", check=True)
                 if os.path.exists(paths["brightness"]):
                     value = b"1\n" if action == "on" else b"0\n"
-                    subprocess.run(
-                        ["sudo", "tee", paths["brightness"]], input=value, check=True
-                    )
+                    subprocess.run(["sudo", "tee", paths["brightness"]], input=value, check=True)
 
             # Get the new state after setting it
-            with open(paths["trigger"], "r") as f:
+            with open(paths["trigger"]) as f:
                 trigger_raw = f.read()
 
             match = re.search(r"\[([\w-]+)\]", trigger_raw)
@@ -134,10 +124,10 @@ def set_led_state(action: str, led_name: str = None) -> dict:
                 state = "blink"
             elif "none" in triggers:
                 try:
-                    with open(paths["brightness"], "r") as bf:
+                    with open(paths["brightness"]) as bf:
                         brightness = int(bf.read().strip())
                         state = "on" if brightness > 0 else "off"
-                except (IOError, ValueError):
+                except (OSError, ValueError):
                     state = "unknown"
             else:
                 state = "unknown"
@@ -189,7 +179,7 @@ def get_status():
     # --- Read Firmware Version ---
     firmware_version = "unknown"
     try:
-        with open(VERSION_FILE_PATH, "r") as f:
+        with open(VERSION_FILE_PATH) as f:
             firmware_version = f.read().strip()
     except FileNotFoundError:
         print(f"Version file not found at: {VERSION_FILE_PATH}")

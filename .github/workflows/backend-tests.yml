@@ -51,13 +51,13 @@ jobs:
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
 
-    - name: Run linting
+    - name: Run linting with Ruff
       working-directory: ./src/backend
       run: |
-        # Stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Exit-zero treats all errors as warnings
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        # Check for errors and style issues
+        ruff check .
+        # Check code formatting
+        ruff format --check .
 
     - name: Run tests with pytest
       working-directory: ./src/backend
@@ -78,31 +78,3 @@ jobs:
       run: |
         coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
 
-  lint-formatting:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-        cache: 'pip'
-        cache-dependency-path: 'src/backend/requirements-dev.txt'
-
-    - name: Install dependencies
-      working-directory: ./src/backend
-      run: |
-        python -m pip install --upgrade pip
-        pip install black isort
-
-    - name: Check code formatting with Black
-      working-directory: ./src/backend
-      run: |
-        black --check --diff .
-
-    - name: Check import sorting with isort
-      working-directory: ./src/backend
-      run: |
-        isort --check-only --diff .

@@ -18,7 +18,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import platform
-from typing import List, Optional
+from typing import Optional
 
 # api/network_routes.py
 from fastapi import APIRouter, HTTPException
@@ -35,7 +35,7 @@ class EthernetStaticConfig(BaseModel):
     ipAddress: str
     subnetMask: str
     gateway: str
-    dnsServers: Optional[List[str]] = None
+    dnsServers: Optional[list[str]] = None
 
 
 class WifiConfig(BaseModel):

@@ -99,8 +99,7 @@ The GitHub Actions workflow (`.github/workflows/backend-tests.yml`) includes:
 
 2. **Automated Checks**
    - Unit tests with pytest
-   - Code linting with flake8
-   - Code formatting checks (black, isort)
+   - Code linting and formatting with Ruff (replaces flake8, black, isort)
    - Coverage reporting
 
 3. **Coverage Integration**

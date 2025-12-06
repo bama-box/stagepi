@@ -63,13 +63,9 @@ async def set_led_state(action: str, led: str = None):
     If led is not provided, controls all available LEDs.
     """
     if led and led not in ["ACT", "PWR"]:
-        raise HTTPException(
-            status_code=400, detail="Invalid LED specified. Must be 'ACT' or 'PWR'"
-        )
+        raise HTTPException(status_code=400, detail="Invalid LED specified. Must be 'ACT' or 'PWR'")
     if action not in ["on", "off", "blink"]:
-        raise HTTPException(
-            status_code=400, detail="Invalid action. Must be 'on', 'off', or 'blink'"
-        )
+        raise HTTPException(status_code=400, detail="Invalid action. Must be 'on', 'off', or 'blink'")
 
     result = system_manager.set_led_state(action, led)
     if result is None:

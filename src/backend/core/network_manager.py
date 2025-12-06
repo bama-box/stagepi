@@ -16,14 +16,13 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
+
 import logging
 import subprocess
 
 # --- Configure Logging ---
 # This sets up basic logging to print INFO level messages and higher to the console.
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 # --- Helper Functions ---
@@ -38,9 +37,7 @@ def _run_nmcli_command(command: list) -> str:
         # ADDED: Log the command before executing it
         logging.info(f"Executing command: {' '.join(full_command)}")
 
-        result = subprocess.run(
-            full_command, capture_output=True, text=True, check=True, timeout=15
-        )
+        result = subprocess.run(full_command, capture_output=True, text=True, check=True, timeout=15)
         return result.stdout.strip()
     except FileNotFoundError:
         # CHANGED: Use logging for errors
@@ -53,26 +50,20 @@ def _run_nmcli_command(command: list) -> str:
     except Exception as e:
         # CHANGED: Use logging for errors
         logging.error(f"An unexpected error occurred: {e}")
-        raise RuntimeError(
-            "An unexpected error occurred while running a system command."
-        )
+        raise RuntimeError("An unexpected error occurred while running a system command.")
 
 
 def _get_connection_name_for_device(device: str) -> str:
     """Finds the connection name for a given device (e.g., 'eth0')."""
     try:
         # This is the most reliable way to get the connection associated with a device
-        dev_output = _run_nmcli_command(
-            ["-t", "-f", "GENERAL.CONNECTION", "device", "show", device]
-        )
+        dev_output = _run_nmcli_command(["-t", "-f", "GENERAL.CONNECTION", "device", "show", device])
         conn_name = dev_output.split(":", 1)[1].strip()
         if conn_name and conn_name != "--":
             return conn_name
         else:
             # If no connection is associated, try finding one targeting the device
-            conn_output = _run_nmcli_command(
-                ["-t", "-f", "NAME,DEVICE", "connection", "show"]
-            )
+            conn_output = _run_nmcli_command(["-t", "-f", "NAME,DEVICE", "connection", "show"])
             for line in conn_output.splitlines():
                 if line.endswith(f":{device}"):
                     return line.split(":", 1)[0].strip()
@@ -122,9 +113,7 @@ def _set_wifi_region(region: str):
             timeout=20,  # Increased timeout for raspi-config
         )
 
-        logging.info(
-            f"Successfully set Wi-Fi region to {region}. Output: {result.stdout.strip()}"
-        )
+        logging.info(f"Successfully set Wi-Fi region to {region}. Output: {result.stdout.strip()}")
 
         # After setting the region, we might need to restart services.
         # For now, we'll just return success. A reboot is often recommended.
@@ -132,18 +121,14 @@ def _set_wifi_region(region: str):
         return _get_wifi_region()  # Return the new region to confirm
 
     except FileNotFoundError:
-        logging.error(
-            "'raspi-config' command not found. This script appears to be running on a non-Raspberry Pi OS."
-        )
+        logging.error("'raspi-config' command not found. This script appears to be running on a non-Raspberry Pi OS.")
         raise RuntimeError("'raspi-config' is not available.")
     except subprocess.CalledProcessError as e:
         error_message = e.stderr.strip()
         logging.error(f"Failed to set Wi-Fi region. Error: {error_message}")
         # Check for a specific error from raspi-config if possible
         if "invalid country code" in error_message.lower():
-            raise ValueError(
-                f"Invalid country code '{region}' according to raspi-config."
-            )
+            raise ValueError(f"Invalid country code '{region}' according to raspi-config.")
         raise RuntimeError(f"Failed to set Wi-Fi region: {error_message}")
     except subprocess.TimeoutExpired:
         logging.error("Timeout expired while trying to set the Wi-Fi region.")
@@ -158,9 +143,7 @@ def _get_ip_info(interface: str):
     try:
         # Get all device properties
         dev_output = _run_nmcli_command(["-f", "all", "device", "show", interface])
-        dev_data = {
-            k: v for k, v in (line.split(":", 1) for line in dev_output.split("\n"))
-        }
+        dev_data = {k: v for k, v in (line.split(":", 1) for line in dev_output.split("\n"))}
 
         # Check if the device is connected
         if dev_data.get("GENERAL.STATE") != "100 (connected)":
@@ -169,9 +152,7 @@ def _get_ip_info(interface: str):
         # Extract IP details
         ip_data = dev_data.get("IP4.ADDRESS[1]", "").split("/")
         prefix = int(ip_data[1]) if len(ip_data) > 1 else 0
-        subnet_mask = ".".join(
-            [str((0xFFFFFFFF << (32 - prefix) >> i) & 0xFF) for i in [24, 16, 8, 0]]
-        )
+        subnet_mask = ".".join([str((0xFFFFFFFF << (32 - prefix) >> i) & 0xFF) for i in [24, 16, 8, 0]])
 
         # Get the connection name and then its method (auto/manual)
         conn_name = dev_data.get("GENERAL.CONNECTION")
@@ -180,9 +161,7 @@ def _get_ip_info(interface: str):
 
         ssid = dev_data.get("AP[1].SSID")
 
-        method_output = _run_nmcli_command(
-            ["-f", "ipv4.method", "connection", "show", conn_name]
-        )
+        method_output = _run_nmcli_command(["-f", "ipv4.method", "connection", "show", conn_name])
         method = method_output.split(":")[1] if ":" in method_output else "unknown"
 
         return {
@@ -244,9 +223,7 @@ def set_ethernet_config(config):
     try:
         _run_nmcli_command(["connection", "up", conn_name])
     except RuntimeError as e:
-        logging.warning(
-            f"Could not bring up connection '{conn_name}', but configuration was saved. Error: {e}"
-        )
+        logging.warning(f"Could not bring up connection '{conn_name}', but configuration was saved. Error: {e}")
 
     return get_ethernet_config()
 
@@ -274,9 +251,7 @@ def reset_ethernet_config():
     try:
         _run_nmcli_command(["connection", "up", conn_name])
     except RuntimeError as e:
-        logging.warning(
-            f"Could not bring up connection '{conn_name}', but configuration was saved. Error: {e}"
-        )
+        logging.warning(f"Could not bring up connection '{conn_name}', but configuration was saved. Error: {e}")
 
     return get_ethernet_config()
 
@@ -355,9 +330,7 @@ def set_wifi_config(config):
                     config.password,
                 ]
             )
-            _run_nmcli_command(
-                ["connection", "modify", "wlan0", "connection.autoconnect", "yes"]
-            )
+            _run_nmcli_command(["connection", "modify", "wlan0", "connection.autoconnect", "yes"])
             _run_nmcli_command(["connection", "up", "wlan0"])
         except RuntimeError as e:
             logging.warning(f"Failed configuring wlan0: {e}")
@@ -394,9 +367,7 @@ def set_wifi_config(config):
 def scan_for_networks():
     """Scans for Wi-Fi networks using nmcli."""
     logging.info("CORE: Scanning for Wi-Fi networks using nmcli...")
-    output = _run_nmcli_command(
-        ["-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list"]
-    )
+    output = _run_nmcli_command(["-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list"])
     lines = output.strip().split("\n")
     networks = []
 
@@ -420,11 +391,7 @@ def scan_for_networks():
                 {
                     "ssid": ssid.strip(),
                     "signalStrength": int(signal),
-                    "security": (
-                        security.strip()
-                        if security.strip() and security.strip() != "--"
-                        else "Open"
-                    ),
+                    "security": (security.strip() if security.strip() and security.strip() != "--" else "Open"),
                 }
             )
 

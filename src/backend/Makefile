@@ -8,8 +8,8 @@ help:
 	@echo "  make install-dev  - Install development dependencies"
 	@echo "  make test         - Run tests"
 	@echo "  make test-cov     - Run tests with coverage report"
-	@echo "  make lint         - Run linting checks"
-	@echo "  make format       - Format code with black and isort"
+	@echo "  make lint         - Run linting checks with Ruff"
+	@echo "  make format       - Auto-fix and format code with Ruff"
 	@echo "  make clean        - Remove cache and coverage files"
 
 install:
@@ -27,14 +27,15 @@ test-cov:
 	@echo "Coverage report generated in htmlcov/index.html"
 
 lint:
-	flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-	flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-	black --check .
-	isort --check-only .
+	# Check for errors and style issues with ruff
+	ruff check .
+	# Check formatting
+	ruff format --check .
 
 format:
-	isort .
-	black .
+	# Auto-fix issues and format code with ruff
+	ruff check --fix .
+	ruff format .
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true

@@ -209,9 +209,7 @@ class TestStreamsAPI:
 
     def test_get_streams_status(self, client, mock_gstreamer):
         """Test getting status of all streams."""
-        mock_gstreamer.get_all_streams_status.return_value = {
-            "stream-1": {"state": "PLAYING", "running": True}
-        }
+        mock_gstreamer.get_all_streams_status.return_value = {"stream-1": {"state": "PLAYING", "running": True}}
 
         response = client.get("/streams/status")
         assert response.status_code == 200

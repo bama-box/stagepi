@@ -24,7 +24,7 @@ import os
 import threading
 import uuid
 from dataclasses import dataclass
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal, Optional
 
 # GStreamer Imports
 import gi
@@ -103,9 +103,7 @@ class AES67Stream:
 
     def start(self):
         try:
-            logger.info(
-                f"Launching Stream {self.config.stream_id} ({self.config.kind})..."
-            )
+            logger.info(f"Launching Stream {self.config.stream_id} ({self.config.kind})...")
             logger.info(f"Pipeline string: {self.pipeline_str}")
             self.pipeline = Gst.parse_launch(self.pipeline_str)
 
@@ -128,9 +126,7 @@ class AES67Stream:
                 if error_msg:
                     raise RuntimeError(f"{error_msg}")
                 else:
-                    raise RuntimeError(
-                        f"Failed to start pipeline on device: {self.config.device}"
-                    )
+                    raise RuntimeError(f"Failed to start pipeline on device: {self.config.device}")
 
             # Wait for state change to complete and check for errors
             # This is critical to catch async errors like "device busy"
@@ -146,9 +142,7 @@ class AES67Stream:
                     raise RuntimeError(f"{error_msg}")
 
                 # Check if we've reached PLAYING state
-                ret, state, pending = self.pipeline.get_state(
-                    timeout=100000000
-                )  # 100ms in nanoseconds
+                ret, state, pending = self.pipeline.get_state(timeout=100000000)  # 100ms in nanoseconds
                 if state == Gst.State.PLAYING:
                     logger.info(f"Stream {self.config.stream_id} is RUNNING.")
                     return
@@ -161,9 +155,7 @@ class AES67Stream:
             if error_msg:
                 raise RuntimeError(f"{error_msg}")
             else:
-                raise RuntimeError(
-                    f"Timeout waiting for stream to start (current state: {state})"
-                )
+                raise RuntimeError(f"Timeout waiting for stream to start (current state: {state})")
 
         except Exception as e:
             logger.error(f"Failed to start {self.config.stream_id}: {e}")
@@ -186,22 +178,14 @@ class AES67Stream:
 
             # Common error mappings to user-friendly messages
             if "device is being used by another application" in error_text.lower():
-                return (
-                    f"Audio device '{self.config.device}' is currently in use "
-                    "by another application"
-                )
+                return f"Audio device '{self.config.device}' is currently in use by another application"
             elif "could not open audio device" in error_text.lower():
                 return (
-                    f"Could not open audio device '{self.config.device}'. "
-                    "Check if device exists and permissions are correct"
+                    f"Could not open audio device '{self.config.device}'. Check if device exists and permissions are correct"
                 )
-            elif (
-                "no such device" in error_text.lower()
-                or "no such file" in error_text.lower()
-            ):
+            elif "no such device" in error_text.lower() or "no such file" in error_text.lower():
                 return (
-                    f"Audio device '{self.config.device}' not found. "
-                    "Use 'arecord -l' or 'aplay -l' to list available devices"
+                    f"Audio device '{self.config.device}' not found. Use 'arecord -l' or 'aplay -l' to list available devices"
                 )
             elif "not-negotiated" in str(debug).lower():
                 return (
@@ -235,7 +219,7 @@ class AES67Stream:
                 self.pipeline = None
                 logger.info(f"Stream {self.config.stream_id} STOPPED.")
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """Get the current state of the GStreamer pipeline."""
         if not self.pipeline:
             return {"state": "NULL", "pending": "NULL", "running": False}
@@ -289,14 +273,12 @@ class GStreamerStreamManager:
     """
 
     def __init__(self):
-        self.streams: Dict[str, AES67Stream] = {}
+        self.streams: dict[str, AES67Stream] = {}
         self._running = True
 
         # GStreamer requires a GLib MainLoop to process bus messages properly.
         self.loop = GLib.MainLoop()
-        self.loop_thread = threading.Thread(
-            target=self._run_loop, daemon=True, name="GMainLoop"
-        )
+        self.loop_thread = threading.Thread(target=self._run_loop, daemon=True, name="GMainLoop")
         self.loop_thread.start()
         logger.info("GStreamerStreamManager initialized. MainLoop running.")
 
@@ -310,9 +292,7 @@ class GStreamerStreamManager:
     def create_stream(self, config: StreamConfig):
         """Creates and starts a new AES67 stream."""
         if config.stream_id in self.streams:
-            logger.warning(
-                f"Stream {config.stream_id} already exists. Stopping old one."
-            )
+            logger.warning(f"Stream {config.stream_id} already exists. Stopping old one.")
             self.stop_stream(config.stream_id)
 
         stream = AES67Stream(config)
@@ -327,13 +307,13 @@ class GStreamerStreamManager:
         else:
             logger.warning(f"Cannot stop stream {stream_id}: ID not found.")
 
-    def get_stream_status(self, stream_id: str) -> Optional[Dict[str, Any]]:
+    def get_stream_status(self, stream_id: str) -> Optional[dict[str, Any]]:
         """Get detailed status of a specific stream."""
         if stream_id in self.streams:
             return self.streams[stream_id].get_state()
         return None
 
-    def get_all_streams_status(self) -> Dict[str, Dict[str, Any]]:
+    def get_all_streams_status(self) -> dict[str, dict[str, Any]]:
         """Get detailed status of all streams."""
         status = {}
         for stream_id, stream in self.streams.items():
@@ -351,7 +331,7 @@ class GStreamerStreamManager:
 
 # Global GStreamer Stream Manager instance
 _gstreamer_manager: Optional[GStreamerStreamManager] = None
-_startup_failed_streams: List[Dict[str, Any]] = []
+_startup_failed_streams: list[dict[str, Any]] = []
 
 
 def get_gstreamer_manager() -> GStreamerStreamManager:
@@ -370,7 +350,7 @@ def shutdown_gstreamer_manager():
         _gstreamer_manager = None
 
 
-def get_startup_failed_streams() -> List[Dict[str, Any]]:
+def get_startup_failed_streams() -> list[dict[str, Any]]:
     """Get the list of streams that failed to start during application startup."""
     global _startup_failed_streams
     return _startup_failed_streams.copy()
@@ -392,7 +372,7 @@ def _provider_json_path(provider: str) -> str:
     return _provider_config_map.get(provider, f"/usr/local/stagepi/etc/{provider}.json")
 
 
-def _json_to_stream_config(stream_data: Dict[str, Any]) -> Optional[StreamConfig]:
+def _json_to_stream_config(stream_data: dict[str, Any]) -> Optional[StreamConfig]:
     """
     Convert JSON stream configuration to StreamConfig dataclass.
 
@@ -422,7 +402,7 @@ def _json_to_stream_config(stream_data: Dict[str, Any]) -> Optional[StreamConfig
         return None
 
 
-def _sync_stream_to_gstreamer(stream_data: Dict[str, Any]):
+def _sync_stream_to_gstreamer(stream_data: dict[str, Any]):
     """
     Synchronize a stream configuration to the GStreamer manager.
     If enabled, starts the stream. If disabled, stops it.
@@ -448,14 +428,11 @@ def _sync_stream_to_gstreamer(stream_data: Dict[str, Any]):
                 logger.error(f"Failed to start stream {stream_id}: {e}")
                 # Re-raise with detailed error message
                 raise RuntimeError(
-                    f"Failed to start {config.kind} stream '{stream_id}' "
-                    f"on device '{config.device}': {str(e)}"
+                    f"Failed to start {config.kind} stream '{stream_id}' on device '{config.device}': {str(e)}"
                 ) from e
         else:
             logger.warning(f"Cannot start stream {stream_id}: Invalid configuration")
-            config_summary = {
-                k: stream_data.get(k) for k in ["kind", "device", "ip", "port"]
-            }
+            config_summary = {k: stream_data.get(k) for k in ["kind", "device", "ip", "port"]}
             raise ValueError(
                 f"Invalid stream configuration for '{stream_id}'. "
                 f"Required fields: kind, ip, port, device, iface. Got: {config_summary}"
@@ -465,9 +442,7 @@ def _sync_stream_to_gstreamer(stream_data: Dict[str, Any]):
         manager.stop_stream(stream_id)
 
 
-def _sync_all_streams_to_gstreamer(
-    provider: str = "aes67", save_failures: bool = False
-):
+def _sync_all_streams_to_gstreamer(provider: str = "aes67", save_failures: bool = False):
     """
     Synchronize all streams from JSON config to GStreamer manager.
     Starts enabled streams, stops disabled ones.
@@ -509,10 +484,7 @@ def _sync_all_streams_to_gstreamer(
                 {
                     "id": stream_id,
                     "error": str(e),
-                    "config": {
-                        k: stream_data.get(k)
-                        for k in ["kind", "device", "ip", "port", "enabled"]
-                    },
+                    "config": {k: stream_data.get(k) for k in ["kind", "device", "ip", "port", "enabled"]},
                 }
             )
 
@@ -522,17 +494,13 @@ def _sync_all_streams_to_gstreamer(
 
     # Log summary of failed streams
     if failed_streams:
-        logger.warning(
-            f"Failed to start {len(failed_streams)} stream(s) during initialization:"
-        )
+        logger.warning(f"Failed to start {len(failed_streams)} stream(s) during initialization:")
         for failed in failed_streams:
             logger.warning(f"  - Stream {failed['id']}: {failed['error']}")
-        logger.info(
-            f"Successfully started {len(streams) - len(failed_streams)} out of {len(streams)} streams"
-        )
+        logger.info(f"Successfully started {len(streams) - len(failed_streams)} out of {len(streams)} streams")
 
 
-def read_streams(provider: str = "aes67") -> Dict[str, List[Dict[str, Any]]]:
+def read_streams(provider: str = "aes67") -> dict[str, list[dict[str, Any]]]:
     """
     Read stream configuration from the provider's JSON file.
 
@@ -546,7 +514,7 @@ def read_streams(provider: str = "aes67") -> Dict[str, List[Dict[str, Any]]]:
     path = _provider_json_path(provider)
     if os.path.exists(path):
         try:
-            with open(path, "r") as jf:
+            with open(path) as jf:
                 data = json.load(jf)
                 data.setdefault("streams", [])
                 # Ensure each stream has an 'enabled' field (default True)
@@ -561,7 +529,7 @@ def read_streams(provider: str = "aes67") -> Dict[str, List[Dict[str, Any]]]:
     return {"streams": []}
 
 
-def write_streams(streams: List[Dict[str, Any]], provider: str = "aes67") -> None:
+def write_streams(streams: list[dict[str, Any]], provider: str = "aes67") -> None:
     """
     Write stream configuration to the provider's JSON file.
 
@@ -587,7 +555,7 @@ def write_streams(streams: List[Dict[str, Any]], provider: str = "aes67") -> Non
     logger.info(f"CORE: Successfully wrote streams to {path}")
 
 
-def get_all_streams(provider: str = "aes67") -> List[Dict[str, Any]]:
+def get_all_streams(provider: str = "aes67") -> list[dict[str, Any]]:
     """
     Get all streams for a provider.
 
@@ -601,9 +569,7 @@ def get_all_streams(provider: str = "aes67") -> List[Dict[str, Any]]:
     return cfg.get("streams", [])
 
 
-def get_stream_by_id(
-    stream_id: str, provider: str = "aes67"
-) -> Optional[Dict[str, Any]]:
+def get_stream_by_id(stream_id: str, provider: str = "aes67") -> Optional[dict[str, Any]]:
     """
     Get a specific stream by ID.
 
@@ -622,9 +588,7 @@ def get_stream_by_id(
     return None
 
 
-def add_stream(
-    stream_data: Dict[str, Any], provider: str = "aes67"
-) -> List[Dict[str, Any]]:
+def add_stream(stream_data: dict[str, Any], provider: str = "aes67") -> list[dict[str, Any]]:
     """
     Add a new stream to the configuration and start it if enabled.
 
@@ -653,9 +617,7 @@ def add_stream(
     return streams
 
 
-def update_stream(
-    stream_id: str, stream_update: Dict[str, Any], provider: str = "aes67"
-) -> List[Dict[str, Any]]:
+def update_stream(stream_id: str, stream_update: dict[str, Any], provider: str = "aes67") -> list[dict[str, Any]]:
     """
     Update an existing stream by ID and restart it with new configuration.
 
@@ -700,7 +662,7 @@ def update_stream(
     return streams
 
 
-def delete_stream(stream_id: str, provider: str = "aes67") -> List[Dict[str, Any]]:
+def delete_stream(stream_id: str, provider: str = "aes67") -> list[dict[str, Any]]:
     """
     Delete a stream by ID and stop its GStreamer pipeline.
 
@@ -740,9 +702,7 @@ def delete_stream(stream_id: str, provider: str = "aes67") -> List[Dict[str, Any
     return new_streams
 
 
-def replace_all_streams(
-    streams: List[Dict[str, Any]], provider: str = "aes67"
-) -> List[Dict[str, Any]]:
+def replace_all_streams(streams: list[dict[str, Any]], provider: str = "aes67") -> list[dict[str, Any]]:
     """
     Replace all streams with a new list and synchronize GStreamer pipelines.
 
@@ -753,9 +713,7 @@ def replace_all_streams(
     Returns:
         The new list of streams (after normalization)
     """
-    logger.info(
-        f"CORE: Replacing all streams for provider '{provider}' with {len(streams)} new streams..."
-    )
+    logger.info(f"CORE: Replacing all streams for provider '{provider}' with {len(streams)} new streams...")
     # Ensure enabled and generate id for each stream
     for s in streams:
         if "enabled" not in s:

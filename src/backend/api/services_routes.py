@@ -16,9 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import json
-import os
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 # api/services_routes.py
 from fastapi import APIRouter, HTTPException
@@ -49,7 +47,7 @@ class StreamModel(BaseModel):
 
 
 class StreamsUpdateRequest(BaseModel):
-    streams: List[StreamModel]
+    streams: list[StreamModel]
 
 
 @router.get("/")
@@ -61,9 +59,7 @@ async def get_all_services():
 async def get_service(service_name: str):
     service = service_manager.get_service_by_name(service_name)
     if not service:
-        raise HTTPException(
-            status_code=404, detail=f"Service '{service_name}' not found."
-        )
+        raise HTTPException(status_code=404, detail=f"Service '{service_name}' not found.")
     return service
 
 
@@ -75,13 +71,9 @@ async def get_service(service_name: str):
 async def update_service(service_name: str, update_request: ServiceUpdateRequest):
     update_data = update_request.dict(exclude_unset=True)
     if not update_data:
-        raise HTTPException(
-            status_code=400, detail="At least one field to update must be provided."
-        )
+        raise HTTPException(status_code=400, detail="At least one field to update must be provided.")
 
     updated_service = service_manager.update_service(service_name, update_data)
     if not updated_service:
-        raise HTTPException(
-            status_code=404, detail=f"Service '{service_name}' not found."
-        )
+        raise HTTPException(status_code=404, detail=f"Service '{service_name}' not found.")
     return updated_service

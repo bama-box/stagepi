@@ -16,7 +16,6 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import json
 import logging
 import os
 
@@ -83,9 +82,7 @@ def _get_service_state(service_name: str):
 
     if proc_enabled is None or proc_active is None:
         logger.warning(f"Falling back to mock state for {service_name}")
-        return _services_mock_state.get(
-            service_name, {"enabled": False, "active": False}
-        )
+        return _services_mock_state.get(service_name, {"enabled": False, "active": False})
 
     # `is-enabled` has an exit code of 0 if enabled.
     enabled = proc_enabled.returncode == 0
@@ -132,7 +129,7 @@ def _read_shairport_config():
     config_path = _services_config["airplay"]["config_path"]
     config = None
     try:
-        with open(config_path, "r") as f:
+        with open(config_path) as f:
             config = libconf.load(f)
     except Exception as e:
         print(f"Error reading or parsing config file: {e}")
@@ -162,9 +159,7 @@ def _write_shairport_config(config):
     try:
         # 1. Create a temporary file in a location we have permission to write to.
         # 'delete=False' is crucial because we need to close it before moving.
-        with tempfile.NamedTemporaryFile(
-            mode="w", delete=False, encoding="utf-8", suffix=".conf"
-        ) as temp_f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, encoding="utf-8", suffix=".conf") as temp_f:
             temp_path = temp_f.name
             libconf.dump(config, temp_f)
 
@@ -187,7 +182,7 @@ def _write_shairport_config(config):
     except FileNotFoundError:
         print("Error: 'sudo' command not found. Is it installed and in your PATH?")
     except subprocess.CalledProcessError as e:
-        print(f"Error during the sudo operation. The command failed.")
+        print("Error during the sudo operation. The command failed.")
         print(f"Return Code: {e.returncode}")
         # stderr often contains the specific error message (e.g., "Permission denied")
         print(f"Error Output (stderr):\n{e.stderr.strip()}")
@@ -261,9 +256,7 @@ def update_service(name: str, update_data: dict):
 
     if "enabled" in update_data:
         enabled = update_data["enabled"]
-        logger.info(
-            f"CORE: Setting service '{name}' ({service_name}) to enabled={enabled}..."
-        )
+        logger.info(f"CORE: Setting service '{name}' ({service_name}) to enabled={enabled}...")
         action = "enable" if enabled else "disable"
         __update_service_config(name, update_data)
 
@@ -276,9 +269,7 @@ def update_service(name: str, update_data: dict):
             _services_mock_state[service_name]["enabled"] = enabled
             _services_mock_state[service_name]["active"] = enabled  # Mocking start/stop
         elif proc.returncode != 0:
-            logger.error(
-                f"Failed to run 'systemctl {' '.join(command_args)}': {proc.stderr.strip()}"
-            )
+            logger.error(f"Failed to run 'systemctl {' '.join(command_args)}': {proc.stderr.strip()}")
 
     # After updating, return the new state of the service.
     return get_service_by_name(name)
