@@ -1,5 +1,5 @@
 Package: stagepi
-Version: 1.99.1
+Version: 1.100.1
 Section: sound
 Priority: optional
 Architecture: all
@@ -8,14 +8,15 @@ Depends: shairport-sync,
  bluez-tools,
  python3,
  python3-netifaces,
- python3-flask,
- python3-fastapi,
  python3-psutil,
  python3-libconf,
  python3-pydbus,
  python3-bleak,
  python3-bluez,
  python3-dbus-next,
+ python3-fastapi,
+ python3-pydantic,
+ uvicorn,
  pipewire,
  pipewire-audio,
  pipewire-pulse,
@@ -32,7 +33,6 @@ Depends: shairport-sync,
  pulseaudio-utils,
  psutils,
  dhcpcd5,
- uvicorn,
  jq
 Maintainer: Shai Taharlev <stagepi@bama-box.com>
 Description: StagePi - your DIY stagebox for audio routing and control.

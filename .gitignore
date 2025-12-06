@@ -3,3 +3,21 @@ private
 pi-gen
 node_modules
 package
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Docker
+Dockerfile.dev
+
+# Local development configuration
+Makefile.local
+*.local
