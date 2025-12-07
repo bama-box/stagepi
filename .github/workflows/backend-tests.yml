@@ -45,7 +45,7 @@ jobs:
       working-directory: ./src/backend
       run: |
         docker run --rm --platform linux/arm64 \
-          -v "$(pwd):/app:ro" \
+          -v "$(pwd):/app" \
           stagepi-test python3 -m pytest tests/ -v --cov=. --cov-report=xml --cov-report=term-missing
 
     - name: Extract coverage report

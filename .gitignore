@@ -16,7 +16,6 @@ htmlcov/
 venv/
 
 # Docker
-Dockerfile.dev
 
 # Local development configuration
 Makefile.local
