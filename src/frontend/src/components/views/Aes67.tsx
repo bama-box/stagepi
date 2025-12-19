@@ -15,6 +15,31 @@ interface Stream {
   enabled?: boolean;
 }
 
+// Helper functions to convert between frontend and backend field names
+function streamToBackend(stream: Partial<Stream>): any {
+  const backend: any = {};
+  if (stream.id !== undefined) backend.id = stream.id;
+  if (stream.mode !== undefined) backend.kind = stream.mode === 'input' ? 'sender' : 'receiver';
+  if (stream.addr !== undefined) backend.ip = stream.addr;
+  if (stream.port !== undefined) backend.port = stream.port;
+  if (stream.hw_device !== undefined) backend.device = stream.hw_device;
+  if (stream.net_device !== undefined) backend.iface = stream.net_device;
+  if (stream.enabled !== undefined) backend.enabled = stream.enabled;
+  return backend;
+}
+
+function streamFromBackend(backend: any): Stream {
+  return {
+    id: backend.id || `s-${Math.random().toString(16).slice(2,10)}`,
+    mode: backend.kind === 'sender' ? 'input' : 'output',
+    addr: backend.ip || '239.69.22.10',
+    port: backend.port ?? 5004,
+    hw_device: backend.device || '',
+    net_device: backend.iface || '',
+    enabled: typeof backend.enabled === 'boolean' ? backend.enabled : true,
+  };
+}
+
 export function Aes67() {
   const [streams, setStreams] = useState<Stream[] | null>(null);
   const [editStreams, setEditStreams] = useState<Stream[] | null>(null);
@@ -55,15 +80,14 @@ export function Aes67() {
         const inDevices = parseDevices(siJson);
         const outDevices = parseDevices(soJson);
 
-        const fetched: Stream[] = (sJson.streams || []).map((st: any) => ({
-          id: st.id || `s-${Math.random().toString(16).slice(2,10)}`,
-          mode: st.mode || 'output',
-          addr: st.addr || '239.69.22.10',
-          port: st.port ?? 5004,
-          hw_device: st.hw_device || '',
-          net_device: st.net_device || (nJson.interfaces && nJson.interfaces[0]) || '',
-          enabled: typeof st.enabled === 'boolean' ? st.enabled : true,
-        }));
+        const fetched: Stream[] = (sJson.streams || []).map((st: any) => {
+          const stream = streamFromBackend(st);
+          // Set default network device if not specified
+          if (!stream.net_device) {
+            stream.net_device = (nJson.interfaces && nJson.interfaces[0]) || '';
+          }
+          return stream;
+        });
         setStreams(fetched);
         setEditStreams(JSON.parse(JSON.stringify(fetched)));
         setNetDevices(nJson.interfaces || []);
@@ -93,14 +117,15 @@ export function Aes67() {
   const patchStreamObj = async (streamObj: Stream) => {
     try {
       const id = streamObj.id;
+      const backendStream = streamToBackend(streamObj);
       const res = await fetch(`${API_BASE_URL}/streams/${encodeURIComponent(id)}`, {
         method: 'PATCH',
         headers: { accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify(streamObj),
+        body: JSON.stringify(backendStream),
       });
       if (!res.ok) throw new Error(`Failed to patch stream ${id}`);
       const j = await res.json();
-      const newStreams = j.streams || [];
+      const newStreams = (j.streams || []).map(streamFromBackend);
       setStreams(newStreams);
       setEditStreams(JSON.parse(JSON.stringify(newStreams)));
     } catch (err: any) {
@@ -228,8 +253,9 @@ export function Aes67() {
                                     const res = await fetch(`${API_BASE_URL}/streams/${encodeURIComponent(id)}`, { method: 'DELETE' });
                                     if (!res.ok) throw new Error('Failed to delete');
                                     const j = await res.json();
-                                    setStreams(j.streams || []);
-                                    setEditStreams(JSON.parse(JSON.stringify(j.streams || [])));
+                                    const convertedStreams = (j.streams || []).map(streamFromBackend);
+                                    setStreams(convertedStreams);
+                                    setEditStreams(JSON.parse(JSON.stringify(convertedStreams)));
                                   } catch (err:any) { alert(`Delete error: ${err.message}`); }
                                 }} title="Delete"><FiTrash2 size={16} /></button>
                               </div>
@@ -337,8 +363,9 @@ export function Aes67() {
                                     const res = await fetch(`${API_BASE_URL}/streams/${encodeURIComponent(id)}`, { method: 'DELETE' });
                                     if (!res.ok) throw new Error('Failed to delete');
                                     const j = await res.json();
-                                    setStreams(j.streams || []);
-                                    setEditStreams(JSON.parse(JSON.stringify(j.streams || [])));
+                                    const convertedStreams = (j.streams || []).map(streamFromBackend);
+                                    setStreams(convertedStreams);
+                                    setEditStreams(JSON.parse(JSON.stringify(convertedStreams)));
                                   } catch (err:any) { alert(`Delete error: ${err.message}`); }
                                 }} title="Delete"><FiTrash2 size={16} /></button>
                               </div>
@@ -357,16 +384,24 @@ export function Aes67() {
             <div className="stream-actions">
               <button className="button-secondary" onClick={async () => {
                 // Create new stream on the server immediately so it has a server-side id
-                const newStreamPayload: Partial<Stream> = { mode: 'output', addr: '239.69.22.10', port: 5004, hw_device: '', net_device: (netDevices[0] || ''), enabled: true };
+                const newStream: Partial<Stream> = {
+                  mode: 'output',
+                  addr: '239.69.22.10',
+                  port: 5004,
+                  hw_device: '',
+                  net_device: (netDevices[0] || ''),
+                  enabled: true
+                };
+                const backendPayload = streamToBackend(newStream);
                 try {
                   const res = await fetch(`${API_BASE_URL}/streams`, {
                     method: 'POST',
                     headers: { accept: 'application/json', 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newStreamPayload),
+                    body: JSON.stringify(backendPayload),
                   });
                   if (!res.ok) throw new Error('Failed to create stream');
                   const j = await res.json();
-                  const updatedStreams: Stream[] = j.streams || [];
+                  const updatedStreams: Stream[] = (j.streams || []).map(streamFromBackend);
                   setStreams(updatedStreams);
                   setEditStreams(JSON.parse(JSON.stringify(updatedStreams)));
                   // open editor for the newly created stream (last one)
