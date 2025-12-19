@@ -149,20 +149,59 @@ def _get_ip_info(interface: str):
         if dev_data.get("GENERAL.STATE") != "100 (connected)":
             return {"connected": False}
 
-        # Extract IP details
-        ip_data = dev_data.get("IP4.ADDRESS[1]", "").split("/")
-        prefix = int(ip_data[1]) if len(ip_data) > 1 else 0
-        subnet_mask = ".".join([str((0xFFFFFFFF << (32 - prefix) >> i) & 0xFF) for i in [24, 16, 8, 0]])
-
-        # Get the connection name and then its method (auto/manual)
+        # Get the connection name first
         conn_name = dev_data.get("GENERAL.CONNECTION")
         if not conn_name:
             return {"connected": False}  # No active connection profile
 
-        ssid = dev_data.get("AP[1].SSID")
+        # Get connection properties to retrieve configured IP (not device IPs)
+        conn_output = _run_nmcli_command(["-f", "all", "connection", "show", conn_name])
+        conn_data = {k: v for k, v in (line.split(":", 1) for line in conn_output.split("\n"))}
 
-        method_output = _run_nmcli_command(["-f", "ipv4.method", "connection", "show", conn_name])
-        method = method_output.split(":")[1] if ":" in method_output else "unknown"
+        # Get the method (auto/manual)
+        method = conn_data.get("ipv4.method", "unknown").strip()
+
+        # Get IP configuration from connection profile
+        ip_address = ""
+        subnet_mask = ""
+
+        # For manual (static) configuration, read from ipv4.addresses
+        if method == "manual":
+            addresses = conn_data.get("ipv4.addresses", "").strip()
+            if addresses:
+                # Format is "192.168.1.100/24"
+                ip_data = addresses.split("/")
+                ip_address = ip_data[0] if len(ip_data) > 0 else ""
+                prefix = int(ip_data[1]) if len(ip_data) > 1 else 0
+                subnet_mask = ".".join([str((0xFFFFFFFF << (32 - prefix) >> i) & 0xFF) for i in [24, 16, 8, 0]])
+        else:
+            # For DHCP (auto), get the currently assigned IP from device
+            # Filter out link-local addresses (169.254.x.x) by checking all IP4.ADDRESS entries
+            for i in range(1, 10):  # Check up to 10 IPs
+                addr_key = f"IP4.ADDRESS[{i}]"
+                addr_value = dev_data.get(addr_key, "")
+                if addr_value:
+                    ip_data = addr_value.split("/")
+                    ip = ip_data[0] if len(ip_data) > 0 else ""
+                    # Skip link-local addresses (169.254.x.x)
+                    if ip and not ip.startswith("169.254."):
+                        ip_address = ip
+                        prefix = int(ip_data[1]) if len(ip_data) > 1 else 0
+                        subnet_mask = ".".join([str((0xFFFFFFFF << (32 - prefix) >> i) & 0xFF) for i in [24, 16, 8, 0]])
+                        break
+
+        # Get gateway and DNS from connection profile
+        gateway = conn_data.get("ipv4.gateway", "").strip()
+        if not gateway:
+            gateway = dev_data.get("IP4.GATEWAY", "")
+
+        dns_servers = conn_data.get("ipv4.dns", "").strip()
+        if dns_servers:
+            dns_list = [d.strip() for d in dns_servers.split(",") if d.strip()]
+        else:
+            dns_list = [dev_data.get("IP4.DNS[1]", "").strip()]
+
+        ssid = dev_data.get("AP[1].SSID")
 
         return {
             "connected": True,
@@ -170,10 +209,10 @@ def _get_ip_info(interface: str):
             "ssid": ssid,
             "connection": conn_name,
             "mode": method,
-            "ipAddress": ip_data[0],
+            "ipAddress": ip_address,
             "subnetMask": subnet_mask,
-            "gateway": dev_data.get("IP4.GATEWAY", ""),
-            "dnsServers": dev_data.get("IP4.DNS[1]", "").split(","),
+            "gateway": gateway,
+            "dnsServers": dns_list,
         }
     except (RuntimeError, IndexError):
         return {"connected": False}
