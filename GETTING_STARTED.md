@@ -143,7 +143,7 @@ Deployment process:
 1. Builds the .deb package
 2. Copies to Raspberry Pi via SCP
 3. Installs via apt
-4. Restarts services
+4. Restarts services (managed by supervisor)
 
 ## Project Structure
 
@@ -262,6 +262,59 @@ Check CORS origins in [src/backend/main.py](src/backend/main.py). Add your front
 | Run frontend | `cd src/frontend && npm run dev` |
 | Build package | `./scripts/build.sh` |
 | Deploy to Pi | `cd src/backend && make deploy-prod` |
+
+## Service Management on Raspberry Pi
+
+StagePi uses **Supervisor** to manage the application processes and **systemd** for system services.
+
+### Application Services (Managed by Supervisor)
+
+Supervisor runs as a systemd service and manages:
+- **stagepi-backend**: FastAPI backend (serves both API and frontend on port 8000)
+
+Supervisor commands on the Pi:
+```bash
+# Check status of all supervised processes
+sudo supervisorctl status
+
+# Restart the backend
+sudo supervisorctl restart stagepi-backend
+
+# View backend logs
+sudo supervisorctl tail -f stagepi-backend
+
+# Stop/start the backend
+sudo supervisorctl stop stagepi-backend
+sudo supervisorctl start stagepi-backend
+```
+
+### System Services (Managed by systemd)
+
+The following system services remain managed by systemd:
+- **supervisord**: The supervisor daemon itself
+- **bluetooth**: Bluetooth system service
+- **shairport-sync**: AirPlay streaming
+- **stagepi-ble**: BLE advertising
+- **ptp4l**: PTP time synchronization
+- **first-boot**: First boot initialization
+
+Systemd commands on the Pi:
+```bash
+# Check supervisor status
+sudo systemctl status supervisord
+
+# Restart supervisor (restarts all supervised processes)
+sudo systemctl restart supervisord
+
+# View all service logs
+sudo journalctl -f
+```
+
+### Configuration Files
+
+- Supervisor config: `/etc/supervisor/conf.d/stagepi.conf`
+- Supervisor logs: `/var/log/supervisor/stagepi-backend.log`
+- Systemd services: `/etc/systemd/system/`
 
 ## Next Steps
 

@@ -28,29 +28,40 @@ install -d /etc/bluetooth
 install -m 644 "$SOURCE_DIR/etc/bluetooth/main.conf" /etc/bluetooth/
 install -m 644 "$SOURCE_DIR/etc/shairport-sync.conf" /etc/
 
+# Copy supervisor configuration
+install -d /etc/supervisor/conf.d
+install -m 644 "$SOURCE_DIR/etc/supervisor/conf.d/stagepi.conf" /etc/supervisor/conf.d/
+
 # Copy systemd service files
 install -d /etc/systemd/system
 install -m 644 "$SOURCE_DIR/etc/systemd/system/stagepi-ble.service" /etc/systemd/system/
-install -m 644 "$SOURCE_DIR/etc/systemd/system/stagepi-ui.service" /etc/systemd/system/
+install -m 644 "$SOURCE_DIR/etc/systemd/system/supervisord.service" /etc/systemd/system/
 install -m 644 "$SOURCE_DIR/etc/systemd/system/ptp4l.service" /etc/systemd/system/
 install -m 644 "$SOURCE_DIR/etc/systemd/system/first-boot.service" /etc/systemd/system/
+
+# Stop and disable old stagepi-ui service if it exists
+systemctl stop stagepi-ui.service 2>/dev/null || true
+systemctl disable stagepi-ui.service 2>/dev/null || true
+
 # Reload systemd to recognize new/changed service files
 systemctl daemon-reload
 
 # Enable services
 systemctl enable shairport-sync || true
 systemctl enable bluetooth || true
-systemctl enable stagepi-ui.service || true
+systemctl enable supervisord.service || true
 systemctl enable stagepi-ble.service || true
 systemctl enable ptp4l.service || true
 systemctl enable first-boot.service || true
 
-# restart services
+# Restart services
 systemctl restart shairport-sync || true
 systemctl restart bluetooth || true
-systemctl restart stagepi-ui.service || true
 systemctl restart stagepi-ble.service || true
 systemctl restart ptp4l.service || true
+
+# Start supervisor (which will start the backend)
+systemctl restart supervisord.service || true
 
 # Reconfigure locales
 #dpkg-reconfigure locales || true

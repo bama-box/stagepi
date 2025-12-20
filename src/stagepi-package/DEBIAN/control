@@ -1,5 +1,5 @@
 Package: stagepi
-Version: 1.107.1
+Version: 1.109.1
 Section: sound
 Priority: optional
 Architecture: all
@@ -33,7 +33,8 @@ Depends: shairport-sync,
  pulseaudio-utils,
  psutils,
  dhcpcd5,
- jq
+ jq,
+ supervisor
 Maintainer: Shai Taharlev <stagepi@bama-box.com>
 Description: StagePi - your DIY stagebox for audio routing and control.
  Designed for musicians, engineers, and tinkerers.
