@@ -1,14 +1,13 @@
 """
-API routes for managing generic streams (AES67 and others).
+API routes for managing AES67 streams.
 
-Provides endpoints under /streams that are file-backed. By default the
-provider is 'aes67' which maps to /usr/local/stagepi/etc/aes67.json. Other
-providers can be added by extending the stream_manager module.
+Provides endpoints under /streams that are file-backed and map to
+/usr/local/stagepi/etc/aes67.json.
 """
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from core import stream_manager
@@ -41,18 +40,18 @@ class StreamsUpdateRequest(BaseModel):
 
 
 @router.get("/streams")
-async def list_streams(provider: str = Query("aes67")):
-    """Get all streams for a provider."""
-    streams = stream_manager.get_all_streams(provider)
+async def list_streams():
+    """Get all AES67 streams."""
+    streams = stream_manager.get_all_streams("aes67")
     return {"streams": streams}
 
 
 @router.post("/streams")
-async def add_stream(stream: StreamModel, provider: str = Query("aes67")):
-    """Add a new stream."""
+async def add_stream(stream: StreamModel):
+    """Add a new AES67 stream."""
     try:
         sdict = stream.to_dict()
-        streams = stream_manager.add_stream(sdict, provider)
+        streams = stream_manager.add_stream(sdict, "aes67")
         return {"streams": streams}
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=f"Failed to start stream: {str(e)}")
@@ -61,11 +60,11 @@ async def add_stream(stream: StreamModel, provider: str = Query("aes67")):
 
 
 @router.patch("/streams/{stream_id}")
-async def update_stream(stream_id: str, stream_update: StreamModel, provider: str = Query("aes67")):
-    """Update an existing stream by ID."""
+async def update_stream(stream_id: str, stream_update: StreamModel):
+    """Update an existing AES67 stream by ID."""
     try:
         update_dict = stream_update.to_dict()
-        streams = stream_manager.update_stream(stream_id, update_dict, provider)
+        streams = stream_manager.update_stream(stream_id, update_dict, "aes67")
         return {"streams": streams}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -76,20 +75,20 @@ async def update_stream(stream_id: str, stream_update: StreamModel, provider: st
 
 
 @router.delete("/streams/{stream_id}")
-async def delete_stream(stream_id: str, provider: str = Query("aes67")):
-    """Delete a stream by ID."""
+async def delete_stream(stream_id: str):
+    """Delete an AES67 stream by ID."""
     try:
-        streams = stream_manager.delete_stream(stream_id, provider)
+        streams = stream_manager.delete_stream(stream_id, "aes67")
         return {"streams": streams}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.put("/streams")
-async def replace_streams(streams_update: StreamsUpdateRequest, provider: str = Query("aes67")):
-    """Replace all streams with a new list."""
+async def replace_streams(streams_update: StreamsUpdateRequest):
+    """Replace all AES67 streams with a new list."""
     streams = [s.to_dict() for s in streams_update.streams]
-    streams = stream_manager.replace_all_streams(streams, provider)
+    streams = stream_manager.replace_all_streams(streams, "aes67")
     return {"streams": streams}
 
 

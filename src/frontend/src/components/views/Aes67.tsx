@@ -383,14 +383,14 @@ export function Aes67() {
 
             <div className="stream-actions">
               <button className="button-secondary" onClick={async () => {
-                // Create new stream on the server immediately so it has a server-side id
+                // Create new stream on the server with disabled state so user can configure it first
                 const newStream: Partial<Stream> = {
                   mode: 'output',
                   addr: '239.69.22.10',
                   port: 5004,
                   hw_device: '',
                   net_device: (netDevices[0] || ''),
-                  enabled: true
+                  enabled: false
                 };
                 const backendPayload = streamToBackend(newStream);
                 try {
