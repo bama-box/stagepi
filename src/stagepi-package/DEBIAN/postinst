@@ -39,31 +39,44 @@ install -m 644 "$SOURCE_DIR/etc/systemd/system/supervisord.service" /etc/systemd
 install -m 644 "$SOURCE_DIR/etc/systemd/system/ptp4l.service" /etc/systemd/system/
 install -m 644 "$SOURCE_DIR/etc/systemd/system/first-boot.service" /etc/systemd/system/
 
-# Stop and disable old stagepi-ui service if it exists
-systemctl stop stagepi-ui.service 2>/dev/null || true
-systemctl disable stagepi-ui.service 2>/dev/null || true
+# Check if we're in a container or if systemd is available
+if [ -d /run/systemd/system ] && [ "$(ps -p 1 -o comm=)" = "systemd" ]; then
+    # We have systemd, safe to use systemctl
+    systemctl daemon-reload
+    systemctl enable stagepi.service
+    systemctl start stagepi.service
+    # Stop and disable old stagepi-ui service if it exists
+    systemctl stop stagepi-ui.service 2>/dev/null || true
+    systemctl disable stagepi-ui.service 2>/dev/null || true
 
-# Reload systemd to recognize new/changed service files
-systemctl daemon-reload
+    # Reload systemd to recognize new/changed service files
+    systemctl daemon-reload
 
-# Enable services
-systemctl enable shairport-sync || true
-systemctl enable bluetooth || true
-systemctl enable supervisord.service || true
-systemctl enable stagepi-ble.service || true
-systemctl enable ptp4l.service || true
-systemctl enable first-boot.service || true
+    # Enable services
+    systemctl enable shairport-sync || true
+    systemctl enable bluetooth || true
+    systemctl enable supervisord.service || true
+    systemctl enable stagepi-ble.service || true
+    systemctl enable ptp4l.service || true
+    systemctl enable first-boot.service || true
 
-# Restart services
-systemctl restart shairport-sync || true
-systemctl restart bluetooth || true
-systemctl restart stagepi-ble.service || true
-systemctl restart ptp4l.service || true
+    # Restart services
+    systemctl restart shairport-sync || true
+    systemctl restart bluetooth || true
+    systemctl restart stagepi-ble.service || true
+    systemctl restart ptp4l.service || true
 
-# Start supervisor (which will start the backend)
-systemctl restart supervisord.service || true
+    # Start supervisor (which will start the backend)
+    systemctl restart supervisord.service || true
 
-# Reconfigure locales
-#dpkg-reconfigure locales || true
+    # Reconfigure locales
+    #dpkg-reconfigure locales || true
+else
+    echo "SystemD not available (container environment detected)"
+    echo "Services will be managed by Supervisor"
+    # Modify supervisor config for container environment (no pi user)
+    sed -i 's/^user=pi$/user=root/' /etc/supervisor/conf.d/stagepi.conf
+    # Supervisor will be started by the container's entrypoint/CMD
+fi
 
 exit 0

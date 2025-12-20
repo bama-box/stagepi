@@ -1,0 +1,28 @@
+# Dockerfile for StagePi development and testing environment
+# Use Debian Bookworm to match Raspberry Pi OS
+
+# syntax=docker/dockerfile:1
+FROM debian:bookworm-slim
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+
+# Copy and install the pre-built stagepi package
+# Use the latest build from the build directory
+COPY stagepi-latest.deb /tmp/stagepi.deb
+
+# Install the stagepi package
+RUN apt-get update
+RUN apt install /tmp/stagepi.deb -y
+RUN rm -rf /var/lib/apt/lists/*
+
+# Create log directory
+RUN mkdir -p /var/log/supervisor
+
+# Expose the backend port
+EXPOSE 8000
+
+# Run supervisor as entrypoint
+ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
