@@ -43,14 +43,6 @@ install -m 644 "$SOURCE_DIR/etc/systemd/system/first-boot.service" /etc/systemd/
 if [ -d /run/systemd/system ] && [ "$(ps -p 1 -o comm=)" = "systemd" ]; then
     # We have systemd, safe to use systemctl
     systemctl daemon-reload
-    systemctl enable stagepi.service
-    systemctl start stagepi.service
-    # Stop and disable old stagepi-ui service if it exists
-    systemctl stop stagepi-ui.service 2>/dev/null || true
-    systemctl disable stagepi-ui.service 2>/dev/null || true
-
-    # Reload systemd to recognize new/changed service files
-    systemctl daemon-reload
 
     # Enable services
     systemctl enable shairport-sync || true

@@ -39,14 +39,14 @@ class StreamsUpdateRequest(BaseModel):
     streams: list[StreamModel]
 
 
-@router.get("/streams")
+@router.get("/")
 async def list_streams():
     """Get all AES67 streams."""
     streams = stream_manager.get_all_streams("aes67")
     return {"streams": streams}
 
 
-@router.post("/streams")
+@router.post("/")
 async def add_stream(stream: StreamModel):
     """Add a new AES67 stream."""
     try:
@@ -59,7 +59,7 @@ async def add_stream(stream: StreamModel):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.patch("/streams/{stream_id}")
+@router.patch("/{stream_id}")
 async def update_stream(stream_id: str, stream_update: StreamModel):
     """Update an existing AES67 stream by ID."""
     try:
@@ -74,7 +74,7 @@ async def update_stream(stream_id: str, stream_update: StreamModel):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/streams/{stream_id}")
+@router.delete("/{stream_id}")
 async def delete_stream(stream_id: str):
     """Delete an AES67 stream by ID."""
     try:
@@ -84,7 +84,7 @@ async def delete_stream(stream_id: str):
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.put("/streams")
+@router.put("/")
 async def replace_streams(streams_update: StreamsUpdateRequest):
     """Replace all AES67 streams with a new list."""
     streams = [s.to_dict() for s in streams_update.streams]
@@ -92,7 +92,7 @@ async def replace_streams(streams_update: StreamsUpdateRequest):
     return {"streams": streams}
 
 
-@router.get("/streams/status")
+@router.get("/status")
 async def get_streams_status():
     """Get detailed status of all GStreamer pipelines."""
     manager = stream_manager.get_gstreamer_manager()
@@ -107,7 +107,7 @@ async def get_streams_status():
     }
 
 
-@router.get("/streams/{stream_id}/status")
+@router.get("/{stream_id}/status")
 async def get_stream_status(stream_id: str):
     """Get detailed status of a specific GStreamer pipeline."""
     manager = stream_manager.get_gstreamer_manager()
@@ -119,7 +119,7 @@ async def get_stream_status(stream_id: str):
     return status
 
 
-@router.get("/streams/startup-failures")
+@router.get("/startup-failures")
 async def get_startup_failures():
     """Get list of streams that failed to start during application startup."""
     failures = stream_manager.get_startup_failed_streams()

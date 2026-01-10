@@ -16,25 +16,17 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import json
+import configparser
 import logging
+import re
 
 # core/stream_manager.py
 import os
-import threading
+import subprocess
+import tempfile
 import uuid
 from dataclasses import dataclass
 from typing import Any, Literal, Optional
-
-# GStreamer Imports
-import gi
-
-gi.require_version("Gst", "1.0")
-gi.require_version("GLib", "2.0")
-from gi.repository import GLib, Gst  # noqa: E402
-
-# Initialize GStreamer immediately
-Gst.init(None)
 
 logger = logging.getLogger(__name__)
 
@@ -59,14 +51,175 @@ class StreamConfig:
     format: str = "S24BE"  # Audio format (S16LE, S24LE, S24BE, S32LE, etc.)
 
 
+# ==========================================
+# Helper Functions for Supervisor Config Management
+# ==========================================
+
+
+def _parse_supervisor_env_vars(env_string: str) -> dict[str, str]:
+    """
+    Parse supervisor environment variable string into dictionary.
+
+    Extracts STAGEPI_* variables from supervisor's environment format:
+    STAGEPI_KIND="sender",STAGEPI_IP="239.69.0.1",...
+
+    Args:
+        env_string: Environment variable string from supervisor config
+
+    Returns:
+        Dictionary mapping field names (lowercase) to string values
+    """
+    parsed = {}
+    pattern = r'STAGEPI_(\w+)="([^"]*)"'
+    for match in re.finditer(pattern, env_string):
+        field_name, value = match.groups()
+        parsed[field_name.lower()] = value
+    return parsed
+
+
+def _build_supervisor_env_string(config: dict[str, Any]) -> str:
+    """
+    Build supervisor environment variable string from stream config.
+
+    Args:
+        config: Stream configuration dictionary
+
+    Returns:
+        Comma-separated environment variable string
+    """
+    env_pairs = []
+
+    # Define field order for consistency
+    fields = [
+        "stream_id",
+        "kind",
+        "ip",
+        "port",
+        "device",
+        "iface",
+        "channels",
+        "buffer_time",
+        "latency_time",
+        "sync",
+        "format",
+        "loopback",
+    ]
+
+    for field in fields:
+        if field in config:
+            value = config[field]
+            # Convert booleans to lowercase string
+            if isinstance(value, bool):
+                value = "true" if value else "false"
+            env_pairs.append(f'STAGEPI_{field.upper()}="{value}"')
+
+    # Always include GST_DEBUG at the end
+    env_pairs.append('GST_DEBUG="2"')
+
+    return ",".join(env_pairs)
+
+
+def _read_supervisor_config(stream_id: str) -> Optional[dict[str, Any]]:
+    """
+    Read a single supervisor config file and extract stream configuration.
+
+    Args:
+        stream_id: The stream ID
+
+    Returns:
+        Stream configuration dictionary or None if file doesn't exist or is malformed
+    """
+    conf_path = os.path.join(AES67Stream.SUPERVISOR_CONF_DIR, f"stagepi-stream-{stream_id}.conf")
+
+    if not os.path.exists(conf_path):
+        return None
+
+    try:
+        config = configparser.ConfigParser()
+        config.read(conf_path)
+
+        section = f"program:stagepi-stream-{stream_id}"
+        if section not in config.sections():
+            logger.warning(f"Config file {conf_path} missing expected section [{section}]")
+            return None
+
+        # Extract metadata from environment variables
+        env_string = config.get(section, "environment", fallback="")
+        parsed_fields = _parse_supervisor_env_vars(env_string)
+
+        # Validate required fields
+        required = ["stream_id", "kind", "ip", "port", "device", "iface"]
+        missing = [f for f in required if f not in parsed_fields]
+        if missing:
+            logger.warning(f"Config {conf_path} missing required fields: {missing}")
+            return None
+
+        # Get enabled status from autostart
+        enabled = config.getboolean(section, "autostart", fallback=True)
+
+        # Build stream config dict with type conversions
+        stream_config = {
+            "id": parsed_fields["stream_id"],
+            "kind": parsed_fields["kind"],
+            "ip": parsed_fields["ip"],
+            "port": int(parsed_fields["port"]),
+            "device": parsed_fields["device"],
+            "iface": parsed_fields["iface"],
+            "channels": int(parsed_fields.get("channels", "2")),
+            "buffer_time": int(parsed_fields.get("buffer_time", "100000")),
+            "latency_time": int(parsed_fields.get("latency_time", "5000000")),
+            "sync": parsed_fields.get("sync", "false").lower() == "true",
+            "format": parsed_fields.get("format", "S24BE"),
+            "loopback": parsed_fields.get("loopback", "false").lower() == "true",
+            "enabled": enabled,
+        }
+
+        return stream_config
+
+    except Exception as e:
+        logger.error(f"Error reading supervisor config {conf_path}: {e}")
+        return None
+
+
+def _list_all_supervisor_configs() -> list[str]:
+    """
+    List all stream IDs from supervisor config files.
+
+    Returns:
+        List of stream IDs
+    """
+    stream_ids = []
+
+    if not os.path.exists(AES67Stream.SUPERVISOR_CONF_DIR):
+        return stream_ids
+
+    try:
+        for filename in os.listdir(AES67Stream.SUPERVISOR_CONF_DIR):
+            if filename.startswith("stagepi-stream-") and filename.endswith(".conf"):
+                # Extract stream ID from filename: stagepi-stream-{id}.conf
+                stream_id = filename[15:-5]  # Remove prefix and suffix
+                stream_ids.append(stream_id)
+    except Exception as e:
+        logger.error(f"Error listing supervisor configs: {e}")
+
+    return stream_ids
+
+
 class AES67Stream:
+    """
+    Manages an AES67 stream using supervisor-managed gst-launch process.
+    Each stream is a separate supervisor program for better isolation and debugging.
+    """
+
+    SUPERVISOR_CONF_DIR = "/etc/supervisor/conf.d"
+
     def __init__(self, config: StreamConfig):
         self.config = config
-        self.pipeline: Optional[Gst.Pipeline] = None
-        self.bus_id = None
         self.pipeline_str = self._build_pipeline_string()
+        self.supervisor_program_name = f"stagepi-stream-{config.stream_id}"
 
     def _build_pipeline_string(self) -> str:
+        """Build the gst-launch-1.0 pipeline string for this stream."""
         c = self.config
 
         if c.kind == "sender":
@@ -101,145 +254,247 @@ class AES67Stream:
         else:
             raise ValueError(f"Unknown stream kind: {c.kind}")
 
-    def start(self):
+    def _create_supervisor_config(self, enabled: bool = True) -> str:
+        """
+        Create a supervisor configuration file for this stream.
+        Returns the path to the created config file.
+
+        Args:
+            enabled: Whether to set autostart=true in the config
+        """
+        # Ensure supervisor streams directory exists
+        subprocess.run(["sudo", "mkdir", "-p", self.SUPERVISOR_CONF_DIR], check=True)
+
+        conf_path = os.path.join(self.SUPERVISOR_CONF_DIR, f"{self.supervisor_program_name}.conf")
+
+        # Build configuration dict for environment variables
+        config_dict = {
+            "stream_id": self.config.stream_id,
+            "kind": self.config.kind,
+            "ip": self.config.ip,
+            "port": self.config.port,
+            "device": self.config.device,
+            "iface": self.config.iface,
+            "channels": self.config.channels,
+            "buffer_time": self.config.buffer_time,
+            "latency_time": self.config.latency_time,
+            "sync": self.config.sync,
+            "format": self.config.format,
+            "loopback": self.config.loopback,
+        }
+
+        env_string = _build_supervisor_env_string(config_dict)
+        autostart = "true" if enabled else "false"
+
+        # Create supervisor configuration with all metadata in environment
+        config_content = f"""# Stream configuration managed by StagePi
+[program:{self.supervisor_program_name}]
+command=/usr/bin/gst-launch-1.0 {self.pipeline_str}
+autostart={autostart}
+autorestart=true
+startsecs=2
+startretries=3
+stdout_logfile=/var/log/supervisor/stream-{self.config.stream_id}.log
+stderr_logfile=/var/log/supervisor/stream-{self.config.stream_id}-error.log
+environment={env_string}
+user=pi
+"""
+        # Write to temp file and move with sudo to handle permissions
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write(config_content)
+            tmp_path = tmp.name
+        
+        subprocess.run(["sudo", "mv", tmp_path, conf_path], check=True)
+
+        logger.info(f"Created supervisor config: {conf_path} (autostart={autostart})")
+        return conf_path
+
+    def _supervisorctl(self, *args) -> subprocess.CompletedProcess:
+        """Execute a supervisorctl command."""
+        cmd = ["sudo", "supervisorctl"] + list(args)
+        logger.debug(f"Executing: {' '.join(cmd)}")
+        return subprocess.run(cmd, capture_output=True, text=True, check=False)
+
+    def start(self, enabled: bool = True):
+        """
+        Start the stream by creating a supervisor config and starting the program.
+
+        Args:
+            enabled: Whether to set autostart=true and actually start the stream
+        """
         try:
             logger.info(f"Launching Stream {self.config.stream_id} ({self.config.kind})...")
             logger.info(f"Pipeline string: {self.pipeline_str}")
-            self.pipeline = Gst.parse_launch(self.pipeline_str)
 
-            # --- CRITICAL: AES67 CLOCKING STRATEGY ---
-            system_clock = Gst.SystemClock.obtain()
-            self.pipeline.use_clock(system_clock)
-            self.pipeline.set_start_time(Gst.CLOCK_TIME_NONE)
-            # ------------------------------------------
+            # Create supervisor configuration file with enabled flag
+            self._create_supervisor_config(enabled=enabled)
 
-            # Bus Watch for Errors
-            bus = self.pipeline.get_bus()
-            bus.add_signal_watch()
-            self.bus_id = bus.connect("message", self._on_bus_message)
+            # Reload supervisor to pick up new config and start the new program if enabled
+            result = self._supervisorctl("update")
+            if result.returncode != 0:
+                # supervisorctl can exit non-zero if other processes fail, so we log and continue,
+                # then check the status of our specific stream below.
+                logger.warning(
+                    f"supervisorctl update finished with exit code {result.returncode}. "
+                    f"Stderr: {result.stderr.strip()}. Stdout: {result.stdout.strip()}"
+                )
 
-            # Start Playing
-            ret = self.pipeline.set_state(Gst.State.PLAYING)
-            if ret == Gst.StateChangeReturn.FAILURE:
-                # Try to get error message from bus
-                error_msg = self._get_bus_error()
-                if error_msg:
-                    raise RuntimeError(f"{error_msg}")
-                else:
-                    raise RuntimeError(f"Failed to start pipeline on device: {self.config.device}")
-
-            # Wait for state change to complete and check for errors
-            # This is critical to catch async errors like "device busy"
+            # Verify it's running
             import time
 
-            timeout = 2.0  # seconds
-            start_time = time.time()
+            time.sleep(0.5)  # Give it a moment to start
 
-            while time.time() - start_time < timeout:
-                # Check for errors on the bus
-                error_msg = self._get_bus_error()
+            status = self._get_supervisor_status()
+            if status and status["state"] != "RUNNING":
+                error_msg = self._get_process_error()
                 if error_msg:
-                    raise RuntimeError(f"{error_msg}")
+                    raise RuntimeError(error_msg)
+                raise RuntimeError(f"Stream failed to start: {status.get('statename', 'unknown state')}")
 
-                # Check if we've reached PLAYING state
-                ret, state, pending = self.pipeline.get_state(timeout=100000000)  # 100ms in nanoseconds
-                if state == Gst.State.PLAYING:
-                    logger.info(f"Stream {self.config.stream_id} is RUNNING.")
-                    return
-
-                # Small sleep to avoid busy waiting
-                time.sleep(0.05)
-
-            # If we get here, timeout occurred
-            error_msg = self._get_bus_error()
-            if error_msg:
-                raise RuntimeError(f"{error_msg}")
-            else:
-                raise RuntimeError(f"Timeout waiting for stream to start (current state: {state})")
+            logger.info(f"Stream {self.config.stream_id} is RUNNING.")
 
         except Exception as e:
             logger.error(f"Failed to start {self.config.stream_id}: {e}")
             self.stop()
-            # Re-raise the exception so the caller knows it failed
             raise
 
-    def _get_bus_error(self) -> Optional[str]:
-        """Check the bus for error messages and return the error string."""
-        if not self.pipeline:
-            return None
+    def _get_process_error(self) -> Optional[str]:
+        """
+        Read the stderr log file to get error messages from the gst-launch process.
+        Parse common GStreamer errors into user-friendly messages.
+        """
+        log_path = f"/var/log/supervisor/stream-{self.config.stream_id}-error.log"
+        try:
+            if os.path.exists(log_path):
+                with open(log_path) as f:
+                    # Read last 20 lines to get recent errors
+                    lines = f.readlines()
+                    error_text = "".join(lines[-20:])
 
-        bus = self.pipeline.get_bus()
-        msg = bus.pop_filtered(Gst.MessageType.ERROR)
-        if msg:
-            err, debug = msg.parse_error()
+                    # Common error mappings to user-friendly messages
+                    if "device is being used by another application" in error_text.lower():
+                        return f"Audio device '{self.config.device}' is currently in use by another application"
+                    elif "could not open audio device" in error_text.lower():
+                        return (
+                            f"Could not open audio device '{self.config.device}'. "
+                            "Check if device exists and permissions are correct"
+                        )
+                    elif "no such device" in error_text.lower() or "no such file" in error_text.lower():
+                        return (
+                            f"Audio device '{self.config.device}' not found. "
+                            "Use 'arecord -l' or 'aplay -l' to list available devices"
+                        )
+                    elif "not-negotiated" in error_text.lower():
+                        return (
+                            f"Audio format negotiation failed on device '{self.config.device}'. "
+                            f"Device may not support the requested format "
+                            f"({self.config.format}, 48kHz, {self.config.channels} channels)"
+                        )
+                    elif "error" in error_text.lower() or "warning" in error_text.lower():
+                        # Return last few lines if they contain errors
+                        return error_text.strip()[-500:]
 
-            # Extract the meaningful part of the error message
-            error_text = err.message
+        except Exception as e:
+            logger.warning(f"Failed to read error log: {e}")
 
-            # Common error mappings to user-friendly messages
-            if "device is being used by another application" in error_text.lower():
-                return f"Audio device '{self.config.device}' is currently in use by another application"
-            elif "could not open audio device" in error_text.lower():
-                return (
-                    f"Could not open audio device '{self.config.device}'. Check if device exists and permissions are correct"
-                )
-            elif "no such device" in error_text.lower() or "no such file" in error_text.lower():
-                return (
-                    f"Audio device '{self.config.device}' not found. Use 'arecord -l' or 'aplay -l' to list available devices"
-                )
-            elif "not-negotiated" in str(debug).lower():
-                return (
-                    f"Audio format negotiation failed on device '{self.config.device}'. "
-                    f"Device may not support the requested format "
-                    f"({self.config.format}, 48kHz, {self.config.channels} channels)"
-                )
+        return None
 
-            # Return original error with debug info if available
-            if debug and len(debug) < 200:
-                return f"{error_text}: {debug}"
-            else:
-                return error_text
+    def _get_supervisor_status(self) -> Optional[dict[str, Any]]:
+        """
+        Get the status of this stream's supervisor program.
+        Returns a dict with state information or None if not found.
+        """
+        result = self._supervisorctl("status", self.supervisor_program_name)
+        output = result.stdout.strip()
+
+        # Check for execution errors (e.g. permission denied, connection refused)
+        if result.returncode != 0:
+            # If it's just "no such process", return None (not created yet)
+            if "no such process" in output.lower() or "no such process" in result.stderr.lower():
+                return None
+            
+            # Otherwise return error state
+            return {
+                "state": "ERROR",
+                "statename": "ERROR",
+                "running": False,
+                "output": f"supervisorctl failed (code {result.returncode}): {output} {result.stderr.strip()}",
+            }
+
+        if output:
+            # Parse supervisor status output
+            # Format: "program_name STATE pid uptime"
+            # Example: "stagepi-stream-abc123 RUNNING pid 1234, uptime 0:00:05"
+
+            if "no such process" in output.lower():
+                return None
+
+            parts = output.split()
+            if len(parts) >= 2:
+                statename = parts[1]
+                return {
+                    "state": statename,
+                    "statename": statename,
+                    "running": statename == "RUNNING",
+                    "output": output,
+                }
 
         return None
 
     def stop(self):
-        if self.pipeline:
-            logger.info(f"Stopping Stream {self.config.stream_id}...")
-            try:
-                self.pipeline.set_state(Gst.State.NULL)
+        """Stop the supervisor-managed stream process but keep config file."""
+        logger.info(f"Stopping Stream {self.config.stream_id}...")
+        try:
+            # Stop the supervisor program
+            result = self._supervisorctl("stop", self.supervisor_program_name)
+            if result.returncode != 0 and "not running" not in result.stdout.lower():
+                logger.warning(f"Error stopping stream: {result.stderr or result.stdout}")
 
-                # Clean up bus signal to prevent memory leaks
-                bus = self.pipeline.get_bus()
-                if self.bus_id:
-                    bus.disconnect(self.bus_id)
-                bus.remove_signal_watch()
-            except Exception as e:
-                logger.error(f"Error during stream cleanup: {e}")
-            finally:
-                self.pipeline = None
-                logger.info(f"Stream {self.config.stream_id} STOPPED.")
+            # Remove from supervisor (unloads from memory but keeps file)
+            result = self._supervisorctl("remove", self.supervisor_program_name)
+            if result.returncode != 0 and "no such process" not in result.stdout.lower():
+                logger.warning(f"Error removing stream from supervisor: {result.stderr or result.stdout}")
+
+            # Update config to set autostart=false (don't delete it!)
+            # Use _create_supervisor_config to handle sudo permissions correctly
+            self._create_supervisor_config(enabled=False)
+
+            logger.info(f"Stream {self.config.stream_id} STOPPED.")
+
+        except Exception as e:
+            logger.error(f"Error during stream stop: {e}")
 
     def get_state(self) -> dict[str, Any]:
-        """Get the current state of the GStreamer pipeline."""
-        if not self.pipeline:
-            return {"state": "NULL", "pending": "NULL", "running": False}
+        """Get the current state of the supervisor-managed stream."""
+        status = self._get_supervisor_status()
 
-        # Get current and pending state
-        ret, state, pending = self.pipeline.get_state(timeout=0)
-
-        state_names = {
-            Gst.State.VOID_PENDING: "VOID_PENDING",
-            Gst.State.NULL: "NULL",
-            Gst.State.READY: "READY",
-            Gst.State.PAUSED: "PAUSED",
-            Gst.State.PLAYING: "PLAYING",
-        }
+        if not status:
+            return {
+                "state": "STOPPED",
+                "statename": "STOPPED",
+                "running": False,
+                "pipeline_string": self.pipeline_str,
+                "config": {
+                    "stream_id": self.config.stream_id,
+                    "kind": self.config.kind,
+                    "ip": self.config.ip,
+                    "port": self.config.port,
+                    "device": self.config.device,
+                    "iface": self.config.iface,
+                    "channels": self.config.channels,
+                    "buffer_time": self.config.buffer_time,
+                    "latency_time": self.config.latency_time,
+                    "sync": self.config.sync,
+                    "format": self.config.format,
+                },
+            }
 
         return {
-            "state": state_names.get(state, "UNKNOWN"),
-            "pending": state_names.get(pending, "UNKNOWN"),
-            "running": state == Gst.State.PLAYING,
+            "state": status["state"],
+            "statename": status["statename"],
+            "running": status["running"],
             "pipeline_string": self.pipeline_str,
+            "supervisor_output": status.get("output", ""),
             "config": {
                 "stream_id": self.config.stream_id,
                 "kind": self.config.kind,
@@ -255,39 +510,16 @@ class AES67Stream:
             },
         }
 
-    def _on_bus_message(self, bus, message):
-        """Handle internal GStreamer events (Errors, EOS, Stats)"""
-        t = message.type
-        if t == Gst.MessageType.ERROR:
-            err, debug = message.parse_error()
-            logger.error(f"STREAM ERROR [{self.config.stream_id}]: {err} | {debug}")
-            self.stop()
-        elif t == Gst.MessageType.WARNING:
-            err, debug = message.parse_warning()
-            logger.warning(f"Stream Warning [{self.config.stream_id}]: {err}")
 
-
-class GStreamerStreamManager:
+class SupervisorStreamManager:
     """
-    Manages the lifecycle of active GStreamer-based AES67 streams.
+    Manages the lifecycle of supervisor-managed AES67 streams.
+    Each stream runs as an independent supervisor program using gst-launch-1.0.
     """
 
     def __init__(self):
         self.streams: dict[str, AES67Stream] = {}
-        self._running = True
-
-        # GStreamer requires a GLib MainLoop to process bus messages properly.
-        self.loop = GLib.MainLoop()
-        self.loop_thread = threading.Thread(target=self._run_loop, daemon=True, name="GMainLoop")
-        self.loop_thread.start()
-        logger.info("GStreamerStreamManager initialized. MainLoop running.")
-
-    def _run_loop(self):
-        """The GLib Main Loop runner."""
-        try:
-            self.loop.run()
-        except Exception as e:
-            logger.error(f"GLib MainLoop crashed: {e}")
+        logger.info("SupervisorStreamManager initialized.")
 
     def create_stream(self, config: StreamConfig):
         """Creates and starts a new AES67 stream."""
@@ -326,28 +558,38 @@ class GStreamerStreamManager:
         ids = list(self.streams.keys())
         for sid in ids:
             self.stop_stream(sid)
-        self.loop.quit()
 
 
-# Global GStreamer Stream Manager instance
-_gstreamer_manager: Optional[GStreamerStreamManager] = None
+# Global Supervisor Stream Manager instance
+_supervisor_manager: Optional[SupervisorStreamManager] = None
 _startup_failed_streams: list[dict[str, Any]] = []
 
 
-def get_gstreamer_manager() -> GStreamerStreamManager:
-    """Get or create the global GStreamer stream manager instance."""
-    global _gstreamer_manager
-    if _gstreamer_manager is None:
-        _gstreamer_manager = GStreamerStreamManager()
-    return _gstreamer_manager
+def get_stream_manager() -> SupervisorStreamManager:
+    """Get or create the global supervisor stream manager instance."""
+    global _supervisor_manager
+    if _supervisor_manager is None:
+        _supervisor_manager = SupervisorStreamManager()
+    return _supervisor_manager
+
+
+def shutdown_stream_manager():
+    """Shutdown the global supervisor stream manager."""
+    global _supervisor_manager
+    if _supervisor_manager is not None:
+        _supervisor_manager.stop_all()
+        _supervisor_manager = None
+
+
+# Legacy function names for backward compatibility
+def get_gstreamer_manager() -> SupervisorStreamManager:
+    """Legacy function name - use get_stream_manager() instead."""
+    return get_stream_manager()
 
 
 def shutdown_gstreamer_manager():
-    """Shutdown the global GStreamer stream manager."""
-    global _gstreamer_manager
-    if _gstreamer_manager is not None:
-        _gstreamer_manager.stop_all()
-        _gstreamer_manager = None
+    """Legacy function name - use shutdown_stream_manager() instead."""
+    shutdown_stream_manager()
 
 
 def get_startup_failed_streams() -> list[dict[str, Any]]:
@@ -361,20 +603,9 @@ def get_startup_failed_streams() -> list[dict[str, Any]]:
 # ==========================================
 
 
-# Map provider name -> JSON config path.
-_provider_config_map = {
-    "aes67": "/usr/local/stagepi/etc/aes67.json",
-}
-
-
-def _provider_json_path(provider: str) -> str:
-    """Return the configured JSON path for the provider."""
-    return _provider_config_map.get(provider, f"/usr/local/stagepi/etc/{provider}.json")
-
-
-def _json_to_stream_config(stream_data: dict[str, Any]) -> Optional[StreamConfig]:
+def _dict_to_stream_config(stream_data: dict[str, Any]) -> Optional[StreamConfig]:
     """
-    Convert JSON stream configuration to StreamConfig dataclass.
+    Convert dictionary stream configuration to StreamConfig dataclass.
 
     Args:
         stream_data: Dictionary containing stream configuration
@@ -405,7 +636,7 @@ def _json_to_stream_config(stream_data: dict[str, Any]) -> Optional[StreamConfig
 def _sync_stream_to_gstreamer(stream_data: dict[str, Any]):
     """
     Synchronize a stream configuration to the GStreamer manager.
-    If enabled, starts the stream. If disabled, stops it.
+    If enabled, starts the stream. If disabled, creates config but doesn't start.
 
     Args:
         stream_data: Dictionary containing stream configuration
@@ -418,28 +649,49 @@ def _sync_stream_to_gstreamer(stream_data: dict[str, Any]):
 
     manager = get_gstreamer_manager()
 
+    config = _dict_to_stream_config(stream_data)
+    if not config:
+        logger.warning(f"Cannot sync stream {stream_id}: Invalid configuration")
+        config_summary = {k: stream_data.get(k) for k in ["kind", "device", "ip", "port"]}
+        raise ValueError(
+            f"Invalid stream configuration for '{stream_id}'. "
+            f"Required fields: kind, ip, port, device, iface. Got: {config_summary}"
+        )
+
     if enabled:
-        config = _json_to_stream_config(stream_data)
-        if config:
-            logger.info(f"Starting GStreamer stream: {stream_id}")
-            try:
-                manager.create_stream(config)
-            except Exception as e:
-                logger.error(f"Failed to start stream {stream_id}: {e}")
-                # Re-raise with detailed error message
-                raise RuntimeError(
-                    f"Failed to start {config.kind} stream '{stream_id}' on device '{config.device}': {str(e)}"
-                ) from e
-        else:
-            logger.warning(f"Cannot start stream {stream_id}: Invalid configuration")
-            config_summary = {k: stream_data.get(k) for k in ["kind", "device", "ip", "port"]}
-            raise ValueError(
-                f"Invalid stream configuration for '{stream_id}'. "
-                f"Required fields: kind, ip, port, device, iface. Got: {config_summary}"
-            )
+        # Start the stream (creates config with autostart=true and starts it)
+        logger.info(f"Starting GStreamer stream: {stream_id}")
+        try:
+            # Stop existing stream if running
+            if stream_id in manager.streams:
+                manager.stop_stream(stream_id)
+
+            # Create and start stream with enabled=True
+            stream = AES67Stream(config)
+            manager.streams[stream_id] = stream
+            stream.start(enabled=True)
+        except Exception as e:
+            logger.error(f"Failed to start stream {stream_id}: {e}")
+            # Re-raise with detailed error message
+            raise RuntimeError(
+                f"Failed to start {config.kind} stream '{stream_id}' on device '{config.device}': {str(e)}"
+            ) from e
     else:
-        logger.info(f"Stopping GStreamer stream: {stream_id}")
-        manager.stop_stream(stream_id)
+        # Create config with autostart=false but don't start the stream
+        logger.info(f"Creating disabled stream config: {stream_id}")
+        try:
+            # Stop stream if it's running
+            if stream_id in manager.streams:
+                manager.stop_stream(stream_id)
+
+            # Just create the config file, don't start
+            stream = AES67Stream(config)
+            stream._create_supervisor_config(enabled=False)
+
+            # Reload supervisor to pick up the new or updated config
+            stream._supervisorctl("update")
+        except Exception as e:
+            logger.warning(f"Failed to create disabled stream config {stream_id}: {e}")
 
 
 def _sync_all_streams_to_gstreamer(provider: str = "aes67", save_failures: bool = False):
@@ -502,7 +754,7 @@ def _sync_all_streams_to_gstreamer(provider: str = "aes67", save_failures: bool 
 
 def read_streams(provider: str = "aes67") -> dict[str, list[dict[str, Any]]]:
     """
-    Read stream configuration from the provider's JSON file.
+    Read stream configurations from supervisor config files.
 
     Args:
         provider: The stream provider name (default: 'aes67')
@@ -510,49 +762,20 @@ def read_streams(provider: str = "aes67") -> dict[str, list[dict[str, Any]]]:
     Returns:
         Dictionary with 'streams' key containing list of stream configurations
     """
-    logger.info(f"CORE: Reading streams for provider '{provider}'...")
-    path = _provider_json_path(provider)
-    if os.path.exists(path):
-        try:
-            with open(path) as jf:
-                data = json.load(jf)
-                data.setdefault("streams", [])
-                # Ensure each stream has an 'enabled' field (default True)
-                for s in data["streams"]:
-                    if "enabled" not in s:
-                        s["enabled"] = True
-                return data
-        except Exception as e:
-            logger.error(f"Error reading stream config from {path}: {e}")
-            # On error, return empty streams to avoid crashing the API.
-            return {"streams": []}
-    return {"streams": []}
+    logger.info(f"CORE: Reading streams from supervisor configs for provider '{provider}'...")
 
+    streams = []
+    stream_ids = _list_all_supervisor_configs()
+    
+    for stream_id in stream_ids:
+        stream_config = _read_supervisor_config(stream_id)
+        if stream_config:
+            streams.append(stream_config)
+        else:
+            logger.warning(f"Skipping malformed config for stream {stream_id}")
 
-def write_streams(streams: list[dict[str, Any]], provider: str = "aes67") -> None:
-    """
-    Write stream configuration to the provider's JSON file.
-
-    Args:
-        streams: List of stream configurations to write
-        provider: The stream provider name (default: 'aes67')
-    """
-    logger.info(f"CORE: Writing {len(streams)} streams for provider '{provider}'...")
-    path = _provider_json_path(provider)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-
-    # Normalize streams to include 'enabled' default True and generate id
-    for i, s in enumerate(streams):
-        if "enabled" not in s:
-            s["enabled"] = True
-        # ensure id
-        if not s.get("id"):
-            s["id"] = f"s-{uuid.uuid4().hex[:8]}"
-
-    to_write = {"streams": streams}
-    with open(path, "w") as jf:
-        json.dump(to_write, jf, indent=2)
-    logger.info(f"CORE: Successfully wrote streams to {path}")
+    logger.info(f"CORE: Loaded {len(streams)} streams from supervisor configs")
+    return {"streams": streams}
 
 
 def get_all_streams(provider: str = "aes67") -> list[dict[str, Any]]:
@@ -571,7 +794,7 @@ def get_all_streams(provider: str = "aes67") -> list[dict[str, Any]]:
 
 def get_stream_by_id(stream_id: str, provider: str = "aes67") -> Optional[dict[str, Any]]:
     """
-    Get a specific stream by ID.
+    Get a specific stream by ID from supervisor config.
 
     Args:
         stream_id: The stream ID to find
@@ -581,11 +804,7 @@ def get_stream_by_id(stream_id: str, provider: str = "aes67") -> Optional[dict[s
         Stream configuration dict or None if not found
     """
     logger.info(f"CORE: Getting stream '{stream_id}' for provider '{provider}'...")
-    streams = get_all_streams(provider)
-    for i, s in enumerate(streams):
-        if str(s.get("id", i)) == str(stream_id) or str(i) == str(stream_id):
-            return s
-    return None
+    return _read_supervisor_config(stream_id)
 
 
 def add_stream(stream_data: dict[str, Any], provider: str = "aes67") -> list[dict[str, Any]]:
@@ -600,7 +819,6 @@ def add_stream(stream_data: dict[str, Any], provider: str = "aes67") -> list[dic
         Updated list of all streams
     """
     logger.info(f"CORE: Adding new stream for provider '{provider}'...")
-    streams = get_all_streams(provider)
 
     # Set defaults
     if "enabled" not in stream_data:
@@ -608,13 +826,12 @@ def add_stream(stream_data: dict[str, Any], provider: str = "aes67") -> list[dic
     if not stream_data.get("id"):
         stream_data["id"] = f"s-{uuid.uuid4().hex[:8]}"
 
-    streams.append(stream_data)
-    write_streams(streams, provider)
-
-    # Start the GStreamer stream if enabled
+    # Supervisor config will be created by _sync_stream_to_gstreamer
+    # which calls AES67Stream.start() -> _create_supervisor_config()
     _sync_stream_to_gstreamer(stream_data)
 
-    return streams
+    # Return updated list of all streams
+    return get_all_streams(provider)
 
 
 def update_stream(stream_id: str, stream_update: dict[str, Any], provider: str = "aes67") -> list[dict[str, Any]]:
@@ -633,38 +850,29 @@ def update_stream(stream_id: str, stream_update: dict[str, Any], provider: str =
         ValueError: If stream_id is not found
     """
     logger.info(f"CORE: Updating stream '{stream_id}' for provider '{provider}'...")
-    streams = get_all_streams(provider)
-    found = False
-    updated_stream = None
 
-    for i, s in enumerate(streams):
-        if str(s.get("id", i)) == str(stream_id) or str(i) == str(stream_id):
-            merged = {**s, **stream_update}
-            if "enabled" not in merged:
-                merged["enabled"] = True
-            # ensure id remains present
-            if not merged.get("id"):
-                merged["id"] = s.get("id") or f"s-{uuid.uuid4().hex[:8]}"
-            streams[i] = merged
-            updated_stream = merged
-            found = True
-            break
-
-    if not found:
+    # Read existing config
+    existing = get_stream_by_id(stream_id, provider)
+    if not existing:
         raise ValueError(f"Stream {stream_id} not found")
 
-    write_streams(streams, provider)
+    # Merge with updates
+    merged = {**existing, **stream_update}
+    if "enabled" not in merged:
+        merged["enabled"] = True
 
-    # Restart the GStreamer stream with new configuration
-    if updated_stream:
-        _sync_stream_to_gstreamer(updated_stream)
+    # Ensure ID is preserved
+    merged["id"] = stream_id
 
-    return streams
+    # Sync to GStreamer (will recreate supervisor config with new settings)
+    _sync_stream_to_gstreamer(merged)
+
+    return get_all_streams(provider)
 
 
 def delete_stream(stream_id: str, provider: str = "aes67") -> list[dict[str, Any]]:
     """
-    Delete a stream by ID and stop its GStreamer pipeline.
+    Delete a stream by ID, stop its GStreamer pipeline, and remove config file.
 
     Args:
         stream_id: The stream ID to delete
@@ -677,34 +885,28 @@ def delete_stream(stream_id: str, provider: str = "aes67") -> list[dict[str, Any
         ValueError: If stream_id is not found
     """
     logger.info(f"CORE: Deleting stream '{stream_id}' for provider '{provider}'...")
-    streams = get_all_streams(provider)
-    new_streams = []
-    found = False
-    deleted_id = None
 
-    for i, s in enumerate(streams):
-        if str(s.get("id", i)) == str(stream_id) or str(i) == str(stream_id):
-            found = True
-            deleted_id = str(s.get("id", stream_id))
-            continue
-        new_streams.append(s)
-
-    if not found:
+    # Verify stream exists
+    existing = get_stream_by_id(stream_id, provider)
+    if not existing:
         raise ValueError(f"Stream {stream_id} not found")
 
-    write_streams(new_streams, provider)
+    # Stop the GStreamer stream (this will set autostart=false but keep file)
+    manager = get_gstreamer_manager()
+    manager.stop_stream(stream_id)
 
-    # Stop the GStreamer stream
-    if deleted_id:
-        manager = get_gstreamer_manager()
-        manager.stop_stream(deleted_id)
+    # Now actually delete the config file
+    conf_path = os.path.join(AES67Stream.SUPERVISOR_CONF_DIR, f"stagepi-stream-{stream_id}.conf")
+    if os.path.exists(conf_path):
+        subprocess.run(["sudo", "rm", conf_path], check=True)
+        logger.info(f"Deleted supervisor config: {conf_path}")
 
-    return new_streams
+    return get_all_streams(provider)
 
 
 def replace_all_streams(streams: list[dict[str, Any]], provider: str = "aes67") -> list[dict[str, Any]]:
     """
-    Replace all streams with a new list and synchronize GStreamer pipelines.
+    Replace all streams with a new list and synchronize supervisor configs.
 
     Args:
         streams: New list of stream configurations
@@ -714,6 +916,7 @@ def replace_all_streams(streams: list[dict[str, Any]], provider: str = "aes67") 
         The new list of streams (after normalization)
     """
     logger.info(f"CORE: Replacing all streams for provider '{provider}' with {len(streams)} new streams...")
+
     # Ensure enabled and generate id for each stream
     for s in streams:
         if "enabled" not in s:
@@ -721,9 +924,19 @@ def replace_all_streams(streams: list[dict[str, Any]], provider: str = "aes67") 
         if not s.get("id"):
             s["id"] = f"s-{uuid.uuid4().hex[:8]}"
 
-    write_streams(streams, provider)
+    # Get current stream IDs from supervisor configs
+    current_ids = set(_list_all_supervisor_configs())
+    new_ids = {str(s.get("id")) for s in streams}
 
-    # Synchronize all streams to GStreamer
+    # Delete configs for streams not in new list
+    for stream_id in current_ids - new_ids:
+        logger.info(f"Removing stream not in new list: {stream_id}")
+        try:
+            delete_stream(stream_id, provider)
+        except Exception as e:
+            logger.error(f"Error removing stream {stream_id}: {e}")
+
+    # Synchronize all streams to GStreamer (creates/updates configs)
     _sync_all_streams_to_gstreamer(provider)
 
     return streams
@@ -731,12 +944,13 @@ def replace_all_streams(streams: list[dict[str, Any]], provider: str = "aes67") 
 
 def initialize_streams(provider: str = "aes67"):
     """
-    Initialize and start all enabled streams from configuration.
+    Initialize and start all enabled streams from supervisor configs.
     Call this on application startup.
 
     Args:
         provider: The stream provider name (default: 'aes67')
     """
     logger.info(f"Initializing streams for provider '{provider}'...")
+
     _sync_all_streams_to_gstreamer(provider, save_failures=True)
     logger.info("Stream initialization complete.")

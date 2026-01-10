@@ -30,7 +30,7 @@ function streamToBackend(stream: Partial<Stream>): any {
 
 function streamFromBackend(backend: any): Stream {
   return {
-    id: backend.id || `s-${Math.random().toString(16).slice(2,10)}`,
+    id: backend.id || `s-${Math.random().toString(16).slice(2, 10)}`,
     mode: backend.kind === 'sender' ? 'input' : 'output',
     addr: backend.ip || '239.69.22.10',
     port: backend.port ?? 5004,
@@ -49,17 +49,17 @@ export function Aes67() {
   const [soundOutputs, setSoundOutputs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  
+
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       try {
         const [sRes, nRes, siRes, soRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/streams`),
-          fetch(`${API_BASE_URL}/network/interfaces`),
-          fetch(`${API_BASE_URL}/sound/input`),
-          fetch(`${API_BASE_URL}/sound/output`),
+          fetch(`${API_BASE_URL}/streams/`),
+          fetch(`${API_BASE_URL}/network/interfaces/`),
+          fetch(`${API_BASE_URL}/sound/input/`),
+          fetch(`${API_BASE_URL}/sound/output/`),
         ]);
         if (!sRes.ok) throw new Error('Failed to fetch streams');
         if (!nRes.ok) throw new Error('Failed to fetch network interfaces');
@@ -136,7 +136,7 @@ export function Aes67() {
 
 
 
-  
+
 
   if (loading) return <div className="card">Loading AES67 status...</div>;
   if (error) return <div className="card error">Error: {error.message}</div>;
@@ -216,7 +216,7 @@ export function Aes67() {
                                       updateStreamField(i, { hw_device: val });
                                     }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
                                       <option value="">(none)</option>
-                                      { (s.mode === 'input' ? soundInputs : soundOutputs).map((d:any) => (
+                                      {(s.mode === 'input' ? soundInputs : soundOutputs).map((d: any) => (
                                         <option key={d.card_id || d.card_name} value={d.card_name || d.card_id}>{d.card_name || d.card_id}</option>
                                       ))}
                                     </select>
@@ -256,7 +256,7 @@ export function Aes67() {
                                     const convertedStreams = (j.streams || []).map(streamFromBackend);
                                     setStreams(convertedStreams);
                                     setEditStreams(JSON.parse(JSON.stringify(convertedStreams)));
-                                  } catch (err:any) { alert(`Delete error: ${err.message}`); }
+                                  } catch (err: any) { alert(`Delete error: ${err.message}`); }
                                 }} title="Delete"><FiTrash2 size={16} /></button>
                               </div>
                             </div>
@@ -326,7 +326,7 @@ export function Aes67() {
                                       updateStreamField(i, { hw_device: val });
                                     }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
                                       <option value="">(none)</option>
-                                      { (s.mode === 'input' ? soundInputs : soundOutputs).map((d:any) => (
+                                      {(s.mode === 'input' ? soundInputs : soundOutputs).map((d: any) => (
                                         <option key={d.card_id || d.card_name} value={d.card_name || d.card_id}>{d.card_name || d.card_id}</option>
                                       ))}
                                     </select>
@@ -366,7 +366,7 @@ export function Aes67() {
                                     const convertedStreams = (j.streams || []).map(streamFromBackend);
                                     setStreams(convertedStreams);
                                     setEditStreams(JSON.parse(JSON.stringify(convertedStreams)));
-                                  } catch (err:any) { alert(`Delete error: ${err.message}`); }
+                                  } catch (err: any) { alert(`Delete error: ${err.message}`); }
                                 }} title="Delete"><FiTrash2 size={16} /></button>
                               </div>
                             </div>
@@ -394,7 +394,7 @@ export function Aes67() {
                 };
                 const backendPayload = streamToBackend(newStream);
                 try {
-                  const res = await fetch(`${API_BASE_URL}/streams`, {
+                  const res = await fetch(`${API_BASE_URL}/streams/`, {
                     method: 'POST',
                     headers: { accept: 'application/json', 'Content-Type': 'application/json' },
                     body: JSON.stringify(backendPayload),
@@ -407,7 +407,7 @@ export function Aes67() {
                   // open editor for the newly created stream (last one)
                   const created = updatedStreams[updatedStreams.length - 1];
                   if (created && created.id) toggleEdit(created.id as string);
-                } catch (err:any) {
+                } catch (err: any) {
                   alert(`Create stream failed: ${err.message}`);
                 }
               }}>Add stream</button>

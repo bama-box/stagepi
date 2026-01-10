@@ -52,11 +52,11 @@ app.add_middleware(
 )
 
 # Include the routers from the different modules
-app.include_router(system_routes.router, prefix="/system", tags=["System"])
-app.include_router(network_routes.router, prefix="/network", tags=["Network"])
-app.include_router(services_routes.router, prefix="/services", tags=["Services"])
-app.include_router(sound_hw_routes.router, prefix="/sound", tags=["Sound"])
-app.include_router(streams_routes.router, tags=["Streams"])
+app.include_router(system_routes.router, prefix="/api/system", tags=["System"])
+app.include_router(network_routes.router, prefix="/api/network", tags=["Network"])
+app.include_router(services_routes.router, prefix="/api/services", tags=["Services"])
+app.include_router(sound_hw_routes.router, prefix="/api/sound", tags=["Sound"])
+app.include_router(streams_routes.router, prefix="/api/streams", tags=["Streams"])
 
 # This directory should contain the 'dist' folder from your Preact build
 UI_BUILD_DIR = os.path.join(os.path.dirname(__file__), "dist")

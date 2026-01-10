@@ -14,15 +14,17 @@ ENV PYTHONPATH=/app
 COPY stagepi-latest.deb /tmp/stagepi.deb
 
 # Install the stagepi package
-RUN apt-get update
-RUN apt install /tmp/stagepi.deb -y
-RUN rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    apt install /tmp/stagepi.deb -y && \
+    rm -rf /var/lib/apt/lists/*
 
-# Create log directory
-RUN mkdir -p /var/log/supervisor
+# Create log directory and supervisor streams config directory
+RUN mkdir -p /var/log/supervisor /etc/supervisor/conf.d/streams && \
+    echo "[include]" >> /etc/supervisor/supervisord.conf && \
+    echo "files = /etc/supervisor/conf.d/*.conf /etc/supervisor/conf.d/streams/*.conf" >> /etc/supervisor/supervisord.conf
 
 # Expose the backend port
 EXPOSE 8000
 
 # Run supervisor as entrypoint
-ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
+ENTRYPOINT ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/supervisord.conf"]

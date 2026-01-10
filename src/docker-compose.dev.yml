@@ -15,6 +15,6 @@ services:
       - PYTHONUNBUFFERED=1
     # Override entrypoint for interactive development
     # Uncomment to get a bash shell instead of supervisor
-    #entrypoint: /bin/bash
-    #stdin_open: true
-    #tty: true
+    # entrypoint: /bin/bash
+    # stdin_open: true
+    # tty: true
