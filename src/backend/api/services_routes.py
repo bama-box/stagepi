@@ -50,12 +50,14 @@ class StreamsUpdateRequest(BaseModel):
     streams: list[StreamModel]
 
 
+@router.get("", include_in_schema=False)
 @router.get("/")
 async def get_all_services():
     return service_manager.get_all_services()
 
 
-@router.get("/{service_name}")
+@router.get("/{service_name}", include_in_schema=False)
+@router.get("/{service_name}/")
 async def get_service(service_name: str):
     service = service_manager.get_service_by_name(service_name)
     if not service:
@@ -67,7 +69,8 @@ async def get_service(service_name: str):
 # For backwards compatibility the service endpoints do not expose AES67 streams anymore.
 
 
-@router.patch("/{service_name}")
+@router.patch("/{service_name}", include_in_schema=False)
+@router.patch("/{service_name}/")
 async def update_service(service_name: str, update_request: ServiceUpdateRequest):
     update_data = update_request.dict(exclude_unset=True)
     if not update_data:

@@ -43,6 +43,7 @@ async def get_sound_outputs():
     return {"outputs": devices}
 
 
+@router.get("", summary="Get all sound devices (inputs & outputs)", tags=["Sound"], include_in_schema=False)
 @router.get("/", summary="Get all sound devices (inputs & outputs)", tags=["Sound"])
 async def get_all_sound_devices():
     """

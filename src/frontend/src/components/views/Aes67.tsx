@@ -56,10 +56,10 @@ export function Aes67() {
       setLoading(true);
       try {
         const [sRes, nRes, siRes, soRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/streams/`),
-          fetch(`${API_BASE_URL}/network/interfaces/`),
-          fetch(`${API_BASE_URL}/sound/input/`),
-          fetch(`${API_BASE_URL}/sound/output/`),
+          fetch(`${API_BASE_URL}/streams`),
+          fetch(`${API_BASE_URL}/network/interfaces`),
+          fetch(`${API_BASE_URL}/sound/input`),
+          fetch(`${API_BASE_URL}/sound/output`),
         ]);
         if (!sRes.ok) throw new Error('Failed to fetch streams');
         if (!nRes.ok) throw new Error('Failed to fetch network interfaces');

@@ -39,6 +39,7 @@ class StreamsUpdateRequest(BaseModel):
     streams: list[StreamModel]
 
 
+@router.get("", include_in_schema=False)
 @router.get("/")
 async def list_streams():
     """Get all AES67 streams."""
@@ -46,6 +47,7 @@ async def list_streams():
     return {"streams": streams}
 
 
+@router.post("", include_in_schema=False)
 @router.post("/")
 async def add_stream(stream: StreamModel):
     """Add a new AES67 stream."""
@@ -59,7 +61,18 @@ async def add_stream(stream: StreamModel):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.patch("/{stream_id}")
+@router.get("/{stream_id}", include_in_schema=False)
+@router.get("/{stream_id}/")
+async def get_stream(stream_id: str):
+    """Get a specific AES67 stream by ID."""
+    stream = stream_manager.get_stream_by_id(stream_id, "aes67")
+    if not stream:
+        raise HTTPException(status_code=404, detail="Stream not found")
+    return stream
+
+
+@router.patch("/{stream_id}", include_in_schema=False)
+@router.patch("/{stream_id}/")
 async def update_stream(stream_id: str, stream_update: StreamModel):
     """Update an existing AES67 stream by ID."""
     try:
@@ -74,7 +87,8 @@ async def update_stream(stream_id: str, stream_update: StreamModel):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/{stream_id}")
+@router.delete("/{stream_id}", include_in_schema=False)
+@router.delete("/{stream_id}/")
 async def delete_stream(stream_id: str):
     """Delete an AES67 stream by ID."""
     try:
@@ -84,6 +98,7 @@ async def delete_stream(stream_id: str):
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@router.put("", include_in_schema=False)
 @router.put("/")
 async def replace_streams(streams_update: StreamsUpdateRequest):
     """Replace all AES67 streams with a new list."""
@@ -107,7 +122,8 @@ async def get_streams_status():
     }
 
 
-@router.get("/{stream_id}/status")
+@router.get("/{stream_id}/status", include_in_schema=False)
+@router.get("/{stream_id}/status/")
 async def get_stream_status(stream_id: str):
     """Get detailed status of a specific GStreamer pipeline."""
     manager = stream_manager.get_gstreamer_manager()
