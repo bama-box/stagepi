@@ -18,10 +18,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import configparser
 import logging
-import re
 
-# core/stream_manager.py
 import os
+import pwd
+import re
 import subprocess
 import tempfile
 import uuid
@@ -218,9 +218,25 @@ class AES67Stream:
         self.pipeline_str = self._build_pipeline_string()
         self.supervisor_program_name = f"stagepi-stream-{config.stream_id}"
 
+    def _get_alsa_device_string(self, device_name: str) -> str:
+        """
+        Format ALSA device string.
+        If device is 'default', return as is.
+        If device has no prefix (no colon), prepend 'hw:'.
+        Otherwise return as is (assumes user provided 'hw:x,y' or 'plughw:x,y').
+        """
+        if device_name == "default":
+            return device_name
+
+        if ":" in device_name:
+            return device_name
+
+        return f"hw:{device_name}"
+
     def _build_pipeline_string(self) -> str:
         """Build the gst-launch-1.0 pipeline string for this stream."""
         c = self.config
+        device_str = self._get_alsa_device_string(c.device)
 
         if c.kind == "sender":
             # - Configurable audio format (S16LE, S24LE, S24BE, S32LE, etc.)
@@ -228,7 +244,7 @@ class AES67Stream:
             # - sync=false (as requested)
             # - buffer-time=100 / latency-time=5000
             return (
-                f"alsasrc device={c.device} buffer-time={c.buffer_time} latency-time={c.latency_time} ! "
+                f"alsasrc device={device_str} buffer-time={c.buffer_time} latency-time={c.latency_time} ! "
                 "audioconvert ! "
                 "audioresample ! "
                 f"audio/x-raw,format={c.format},rate=48000,channels={c.channels} ! "
@@ -248,7 +264,7 @@ class AES67Stream:
                 "rtpjitterbuffer mode=slave name=jbuf latency=20 ! "
                 "rtpL24depay ! "
                 "audioconvert ! "
-                f"alsasink device={c.device}"
+                f"alsasink device={device_str}"
             )
 
         else:
@@ -284,6 +300,34 @@ class AES67Stream:
         }
 
         env_string = _build_supervisor_env_string(config_dict)
+
+        
+        # Inject necessary environment variables for GStreamer/ALSA
+        # gst-launch needs XDG_RUNTIME_DIR for PulseAudio/PipeWire interactions
+        # and HOME for some plugin configs.
+        try:
+            # We assume the user is 'pi' as per the config line "user=pi" below
+            # But we can make it more robust by looking up the user
+            target_user = "pi"
+            pw_record = pwd.getpwnam(target_user)
+            user_env = {
+                "HOME": pw_record.pw_dir,
+                "USER": target_user,
+                "XDG_RUNTIME_DIR": f"/run/user/{pw_record.pw_uid}",
+            }
+            
+            # Append these to the existing env_string
+            extra_env = ",".join([f'{k}="{v}"' for k, v in user_env.items()])
+            if env_string:
+                env_string = f"{env_string},{extra_env}"
+            else:
+                env_string = extra_env
+                
+        except KeyError:
+            logger.warning(f"User 'pi' not found. Supervisor environment might be incomplete.")
+        except Exception as e:
+            logger.warning(f"Failed to setup environment for supervisor stream: {e}")
+
         autostart = "true" if enabled else "false"
 
         # Create supervisor configuration with all metadata in environment
@@ -303,7 +347,7 @@ user=pi
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
             tmp.write(config_content)
             tmp_path = tmp.name
-        
+
         subprocess.run(["sudo", "mv", tmp_path, conf_path], check=True)
 
         logger.info(f"Created supervisor config: {conf_path} (autostart={autostart})")
@@ -412,7 +456,7 @@ user=pi
             # If it's just "no such process", return None (not created yet)
             if "no such process" in output.lower() or "no such process" in result.stderr.lower():
                 return None
-            
+
             # Otherwise return error state
             return {
                 "state": "ERROR",
@@ -766,7 +810,7 @@ def read_streams(provider: str = "aes67") -> dict[str, list[dict[str, Any]]]:
 
     streams = []
     stream_ids = _list_all_supervisor_configs()
-    
+
     for stream_id in stream_ids:
         stream_config = _read_supervisor_config(stream_id)
         if stream_config:
