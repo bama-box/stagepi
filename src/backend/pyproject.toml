@@ -15,6 +15,7 @@ dependencies = [
     "pydantic>=2.5.3",
     "python-multipart>=0.0.6",
     "libconf>=2.0.1",
+    "requests>=2.32.5",
 ]
 
 [project.optional-dependencies]

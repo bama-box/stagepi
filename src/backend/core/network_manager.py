@@ -57,13 +57,13 @@ def _get_connection_name_for_device(device: str) -> str:
     """Finds the connection name for a given device (e.g., 'eth0')."""
     try:
         # This is the most reliable way to get the connection associated with a device
-        dev_output = _run_nmcli_command(["-t", "-f", "GENERAL.CONNECTION", "device", "show", device])
+        dev_output = _run_nmcli_command(["-f", "GENERAL.CONNECTION", "device", "show", device])
         conn_name = dev_output.split(":", 1)[1].strip()
         if conn_name and conn_name != "--":
             return conn_name
         else:
             # If no connection is associated, try finding one targeting the device
-            conn_output = _run_nmcli_command(["-t", "-f", "NAME,DEVICE", "connection", "show"])
+            conn_output = _run_nmcli_command(["-f", "NAME,DEVICE", "connection", "show"])
             for line in conn_output.splitlines():
                 if line.endswith(f":{device}"):
                     return line.split(":", 1)[0].strip()

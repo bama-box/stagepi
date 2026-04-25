@@ -11,3 +11,9 @@ python-multipart==0.0.6
 # GStreamer CLI tools (system package, managed via supervisor)
 # Install via: sudo apt-get install gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-alsa
 # Streams are managed as individual supervisor programs using gst-launch-1.0
+
+# NMOS Dependencies
+zeroconf==0.131.0
+netifaces==0.11.0
+requests==2.31.0
+
