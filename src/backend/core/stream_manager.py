@@ -21,6 +21,7 @@ import logging
 
 import os
 import pwd
+import grp
 import re
 import subprocess
 import tempfile
@@ -117,6 +118,21 @@ def _build_supervisor_env_string(config: dict[str, Any]) -> str:
     env_pairs.append('GST_DEBUG="2"')
 
     return ",".join(env_pairs)
+
+
+def _run_privileged_command(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
+    """
+    Run a command with privileges.
+    If running as root (uid 0), runs directly.
+    Otherwise, prepends 'sudo'.
+    """
+    if os.geteuid() == 0:
+        full_cmd = cmd
+    else:
+        full_cmd = ["sudo"] + cmd
+
+    logger.debug(f"Executing privileged command: {' '.join(full_cmd)}")
+    return subprocess.run(full_cmd, capture_output=True, text=True, check=check)
 
 
 def _read_supervisor_config(stream_id: str) -> Optional[dict[str, Any]]:
@@ -279,7 +295,7 @@ class AES67Stream:
             enabled: Whether to set autostart=true in the config
         """
         # Ensure supervisor streams directory exists
-        subprocess.run(["sudo", "mkdir", "-p", self.SUPERVISOR_CONF_DIR], check=True)
+        _run_privileged_command(["mkdir", "-p", self.SUPERVISOR_CONF_DIR])
 
         conf_path = os.path.join(self.SUPERVISOR_CONF_DIR, f"{self.supervisor_program_name}.conf")
 
@@ -305,14 +321,45 @@ class AES67Stream:
         # Inject necessary environment variables for GStreamer/ALSA
         # gst-launch needs XDG_RUNTIME_DIR for PulseAudio/PipeWire interactions
         # and HOME for some plugin configs.
+        
+        # Determine user to run as
+        target_user = "pi"
+        run_user_line = f"user={target_user}"
+        
         try:
-            # We assume the user is 'pi' as per the config line "user=pi" below
-            # But we can make it more robust by looking up the user
-            target_user = "pi"
+            # Check if 'pi' exists
             pw_record = pwd.getpwnam(target_user)
+        except KeyError:
+            # Fallback to current user if not root, or just don't specify user (runs as root or supervisor default)
+            # If running as root (0), we probably want to run as a specific user if possible, 
+            # but if we are in a container as root without 'pi', we might just run as root.
+            current_uid = os.geteuid()
+            if current_uid != 0:
+                # Running as non-root user, use that
+                try:
+                    pw_record = pwd.getpwuid(current_uid)
+                    target_user = pw_record.pw_name
+                    run_user_line = f"user={target_user}"
+                except Exception:
+                    logger.warning("Could not determine current user. Supervisor config will use default.")
+                    run_user_line = ""
+                    pw_record = None
+            else:
+                # Running as root and 'pi' doesn't exist. 
+                # Check for 'audio' group membership if we wanted to be fancy, but simplest is running as root
+                # or not specifying user (supervisor runs as its own user usually root)
+                logger.warning(f"User '{target_user}' not found and running as root. Supervisor will run as configured user (usually root).")
+                run_user_line = ""
+                # For env vars, we can use root's info
+                try:
+                    pw_record = pwd.getpwuid(0)
+                except Exception:
+                    pw_record = None
+            
+        if pw_record:
             user_env = {
                 "HOME": pw_record.pw_dir,
-                "USER": target_user,
+                "USER": pw_record.pw_name,
                 "XDG_RUNTIME_DIR": f"/run/user/{pw_record.pw_uid}",
             }
             
@@ -322,11 +369,6 @@ class AES67Stream:
                 env_string = f"{env_string},{extra_env}"
             else:
                 env_string = extra_env
-                
-        except KeyError:
-            logger.warning(f"User 'pi' not found. Supervisor environment might be incomplete.")
-        except Exception as e:
-            logger.warning(f"Failed to setup environment for supervisor stream: {e}")
 
         autostart = "true" if enabled else "false"
 
@@ -341,23 +383,23 @@ startretries=3
 stdout_logfile=/var/log/supervisor/stream-{self.config.stream_id}.log
 stderr_logfile=/var/log/supervisor/stream-{self.config.stream_id}-error.log
 environment={env_string}
-user=pi
+{run_user_line}
 """
         # Write to temp file and move with sudo to handle permissions
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
             tmp.write(config_content)
             tmp_path = tmp.name
 
-        subprocess.run(["sudo", "mv", tmp_path, conf_path], check=True)
+        _run_privileged_command(["mv", tmp_path, conf_path])
 
         logger.info(f"Created supervisor config: {conf_path} (autostart={autostart})")
         return conf_path
 
     def _supervisorctl(self, *args) -> subprocess.CompletedProcess:
         """Execute a supervisorctl command."""
-        cmd = ["sudo", "supervisorctl"] + list(args)
-        logger.debug(f"Executing: {' '.join(cmd)}")
-        return subprocess.run(cmd, capture_output=True, text=True, check=False)
+        cmd = ["supervisorctl"] + list(args)
+        # Use privileged command wrapper
+        return _run_privileged_command(cmd, check=False)
 
     def start(self, enabled: bool = True):
         """
@@ -723,19 +765,24 @@ def _sync_stream_to_gstreamer(stream_data: dict[str, Any]):
     else:
         # Create config with autostart=false but don't start the stream
         logger.info(f"Creating disabled stream config: {stream_id}")
-        try:
-            # Stop stream if it's running
-            if stream_id in manager.streams:
-                manager.stop_stream(stream_id)
+        
+        # Stop stream if it's running
+        if stream_id in manager.streams:
+            manager.stop_stream(stream_id)
 
-            # Just create the config file, don't start
-            stream = AES67Stream(config)
-            stream._create_supervisor_config(enabled=False)
+        # Just create the config file, don't start
+        stream = AES67Stream(config)
+        stream._create_supervisor_config(enabled=False)
 
-            # Reload supervisor to pick up the new or updated config
-            stream._supervisorctl("update")
-        except Exception as e:
-            logger.warning(f"Failed to create disabled stream config {stream_id}: {e}")
+        # Reload supervisor to pick up the new or updated config
+        stream._supervisorctl("update")
+
+        # Just create the config file, don't start
+        stream = AES67Stream(config)
+        stream._create_supervisor_config(enabled=False)
+
+        # Reload supervisor to pick up the new or updated config
+        stream._supervisorctl("update")
 
 
 def _sync_all_streams_to_gstreamer(provider: str = "aes67", save_failures: bool = False):
@@ -942,7 +989,7 @@ def delete_stream(stream_id: str, provider: str = "aes67") -> list[dict[str, Any
     # Now actually delete the config file
     conf_path = os.path.join(AES67Stream.SUPERVISOR_CONF_DIR, f"stagepi-stream-{stream_id}.conf")
     if os.path.exists(conf_path):
-        subprocess.run(["sudo", "rm", conf_path], check=True)
+        _run_privileged_command(["rm", conf_path])
         logger.info(f"Deleted supervisor config: {conf_path}")
 
     return get_all_streams(provider)

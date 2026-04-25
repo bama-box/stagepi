@@ -1,5 +1,5 @@
 Package: stagepi
-Version: 1.151.1
+Version: 1.156.1
 Section: sound
 Priority: optional
 Architecture: all
@@ -10,6 +10,7 @@ Depends: shairport-sync,
  python3-netifaces,
  python3-psutil,
  python3-libconf,
+ python3-zeroconf,
  python3-pydbus,
  python3-bleak,
  python3-bluez,

@@ -16,14 +16,33 @@ from api import (
     system_routes,
 )
 from core import stream_manager
+from core.nmos.node import get_nmos_node
+from core.nmos.api import router as nmos_node_router
+from core.nmos.connection import router as nmos_conn_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Initialize and start all enabled streams
     stream_manager.initialize_streams(provider="aes67")
+    
+    # Initialize NMOS Node
+    nmos = get_nmos_node()
+    nmos.start()
+    
+    # Sync existing streams to NMOS
+    sm = stream_manager.get_stream_manager()
+    for stream in sm.streams.values():
+        if stream.config.kind == "receiver":
+             # AES67Stream.config is a StreamConfig dataclass
+             # We need to convert it to dict for add_receiver if it expects dict,
+             # or update add_receiver to handle dataclass.
+             # add_receiver expects dict currently ("stream_config.get('id')")
+             nmos.add_receiver(stream.config.__dict__)
+
     yield
     # Shutdown: Stop all running streams
+    nmos.stop()
     stream_manager.shutdown_gstreamer_manager()
 
 
@@ -57,6 +76,10 @@ app.include_router(network_routes.router, prefix="/api/network", tags=["Network"
 app.include_router(services_routes.router, prefix="/api/services", tags=["Services"])
 app.include_router(sound_hw_routes.router, prefix="/api/sound", tags=["Sound"])
 app.include_router(streams_routes.router, prefix="/api/streams", tags=["Streams"])
+
+# NMOS Routes
+app.include_router(nmos_node_router, prefix="/x-nmos/node", tags=["NMOS Node"])
+app.include_router(nmos_conn_router, prefix="/x-nmos/connection", tags=["NMOS Connection"])
 
 # This directory should contain the 'dist' folder from your Preact build
 UI_BUILD_DIR = os.path.join(os.path.dirname(__file__), "dist")

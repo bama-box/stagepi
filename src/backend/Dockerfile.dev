@@ -48,6 +48,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Install ruff via pip (not available as Debian package in Bookworm)
     && python3 -m pip install --break-system-packages ruff==0.1.9
 
+# Install project dependencies
+COPY requirements.txt /tmp/requirements.txt
+RUN python3 -m pip install --break-system-packages -r /tmp/requirements.txt
+
 # Set working directory
 WORKDIR /app
 
