@@ -1,0 +1,429 @@
+/* PiHardwareMap.css */
+.pi-hardware-map-container {
+  background: #121319;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  animation: map-fade-in 0.25s ease-out;
+}
+
+@keyframes map-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header */
+.hardware-map-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hw-board-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.hw-board-badge {
+  align-self: flex-start;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  background: rgba(96, 165, 250, 0.12);
+  color: #60a5fa;
+  border-radius: 4px;
+  border: 1px solid rgba(96, 165, 250, 0.25);
+}
+
+.hw-board-model {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f4f4f5;
+  letter-spacing: -0.01em;
+}
+
+.hw-soc-label {
+  font-size: 0.8rem;
+  color: #a1a1aa;
+}
+
+/* HAT Status Pill */
+.hat-detected-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+}
+
+.hat-detected-pill.no-hat {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
+  font-size: 0.8rem;
+}
+
+.hat-pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+  animation: hat-pulse 2s infinite;
+}
+
+@keyframes hat-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.2);
+  }
+}
+
+.hat-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.hat-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #fbbf24;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hat-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f4f4f5;
+}
+
+/* Schematic Layout: Board Canvas + Inspector Panel */
+.hardware-schematic-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .hardware-schematic-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* SVG Schematic Board */
+.board-schematic-wrapper {
+  background: #090a0f;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.pi-board-svg {
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.4));
+  user-select: none;
+}
+
+.clickable-schematic-port {
+  transition: all 0.2s ease;
+}
+
+.clickable-schematic-port:hover rect {
+  stroke: #f59e0b !important;
+  stroke-width: 2.5px !important;
+  cursor: pointer;
+}
+
+/* Inspector Panel */
+.port-inspector-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.inspector-card {
+  background: #181922;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.inspector-card.empty {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #71717a;
+  min-height: 200px;
+}
+
+.inspector-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.inspector-icon-pill {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.inspector-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  overflow: hidden;
+}
+
+.inspector-type-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #f59e0b;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.inspector-name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f4f4f5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Inspector Details Table */
+.inspector-details-table {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.inspector-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.85rem;
+}
+
+.inspector-row .row-label {
+  color: #71717a;
+  font-weight: 500;
+}
+
+.inspector-row .row-val {
+  color: #e4e4e7;
+  font-weight: 600;
+  text-align: right;
+}
+
+.inspector-row .row-val.mono {
+  font-family: monospace;
+  color: #60a5fa;
+}
+
+.active-streams-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #10b981;
+  font-weight: 700;
+}
+
+.active-streams-tag .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10b981;
+}
+
+.active-streams-tag .dot.pulse {
+  animation: dot-glow 1.5s infinite;
+}
+
+@keyframes dot-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  50% { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+}
+
+.idle-streams-tag {
+  color: #71717a;
+  font-weight: 500;
+}
+
+/* Inspector Actions */
+.inspector-actions {
+  display: flex;
+  flex-direction: column;
+}
+
+.inspector-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.inspector-action-btn:hover {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* Interfaces Grid List */
+.interfaces-grid-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+.interface-chip-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: #16171f;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.interface-chip-card:hover {
+  background: #1d1f2a;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.interface-chip-card.selected {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.interface-chip-card.active {
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.chip-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+.chip-icon {
+  color: #a1a1aa;
+  display: flex;
+  align-items: center;
+}
+
+.interface-chip-card.selected .chip-icon {
+  color: #f59e0b;
+}
+
+.chip-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  overflow: hidden;
+}
+
+.chip-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.chip-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f4f4f5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.primary-pill {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.chip-port-desc {
+  font-size: 0.72rem;
+  color: #71717a;
+  font-family: monospace;
+}
+
+.chip-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chip-status-dot.running {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.chip-status-dot.idle {
+  background: #3f3f46;
+}

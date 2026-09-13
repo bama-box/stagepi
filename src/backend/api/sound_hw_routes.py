@@ -43,6 +43,14 @@ async def get_sound_outputs():
     return {"outputs": devices}
 
 
+@router.get("/topology", summary="Get audio hardware topology and physical port mapping", tags=["Sound"])
+async def get_audio_topology():
+    """
+    Returns detected Raspberry Pi model, mounted HAT info, and physical audio interface mapping.
+    """
+    return sound_hw_manager.get_audio_topology()
+
+
 @router.get("", summary="Get all sound devices (inputs & outputs)", tags=["Sound"], include_in_schema=False)
 @router.get("/", summary="Get all sound devices (inputs & outputs)", tags=["Sound"])
 async def get_all_sound_devices():
@@ -52,3 +60,4 @@ async def get_all_sound_devices():
     inputs = sound_hw_manager.get_sound_inputs()
     outputs = sound_hw_manager.get_sound_outputs()
     return {"inputs": inputs, "outputs": outputs}
+

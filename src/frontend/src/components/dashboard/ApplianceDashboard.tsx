@@ -8,11 +8,13 @@ import {
   FiRefreshCw,
   FiFileText,
   FiWifi,
+  FiCpu,
 } from 'react-icons/fi';
 import { RiSpeaker3Line, RiAirplayLine, RiBluetoothLine } from 'react-icons/ri';
 import { HiOutlineMicrophone } from 'react-icons/hi2';
 import { BsEthernet } from 'react-icons/bs';
 import { StreamModal, type Stream } from '../views/StreamModal';
+import { PiHardwareMap, type AudioTopology } from '../hardware/PiHardwareMap';
 import { useNotification } from '../../context/NotificationContext';
 import { API_BASE_URL } from '../../config';
 import './ApplianceDashboard.css';
@@ -75,10 +77,14 @@ export function ApplianceDashboard({ onOpenSettings }: ApplianceDashboardProps) 
   const [bluetooth, setBluetooth] = useState<ServiceStatus>({ enabled: false, active: false, loading: false });
   const [wifiMode, setWifiMode] = useState<string>('client');
 
+  // Hardware topology state
+  const [topology, setTopology] = useState<AudioTopology | null>(null);
+  const [isMapOpen, setIsMapOpen] = useState(false);
+
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [sRes, nRes, siRes, soRes, apRes, btRes, wfRes] = await Promise.all([
+      const [sRes, nRes, siRes, soRes, apRes, btRes, wfRes, topoRes] = await Promise.all([
         fetch(`${API_BASE_URL}/streams`).catch(() => null),
         fetch(`${API_BASE_URL}/network/interfaces`).catch(() => null),
         fetch(`${API_BASE_URL}/sound/input`).catch(() => null),
@@ -86,6 +92,7 @@ export function ApplianceDashboard({ onOpenSettings }: ApplianceDashboardProps) 
         fetch(`${API_BASE_URL}/services/airplay`).catch(() => null),
         fetch(`${API_BASE_URL}/services/bluetooth`).catch(() => null),
         fetch(`${API_BASE_URL}/network/config/wifi`).catch(() => null),
+        fetch(`${API_BASE_URL}/sound/topology`).catch(() => null),
       ]);
 
       if (sRes && sRes.ok) {
@@ -115,6 +122,11 @@ export function ApplianceDashboard({ onOpenSettings }: ApplianceDashboardProps) 
       if (soRes && soRes.ok) {
         const soJson = await soRes.json().catch(() => []);
         setSoundOutputs(parseDevices(soJson));
+      }
+
+      if (topoRes && topoRes.ok) {
+        const topoJson = await topoRes.json().catch(() => null);
+        if (topoJson) setTopology(topoJson);
       }
 
       if (apRes && apRes.ok) {
@@ -340,7 +352,13 @@ export function ApplianceDashboard({ onOpenSettings }: ApplianceDashboardProps) 
   // Detect primary sound card for badge
   const detectedOutputs = soundOutputs.map(o => o.card_name || o.name || 'Output').filter(Boolean);
   const detectedInputs = soundInputs.map(i => i.card_name || i.name || 'Input').filter(Boolean);
-  const primaryHwName = detectedOutputs[0] || detectedInputs[0] || 'ALSA Sound Hardware';
+  const primaryInterface = topology?.interfaces.find(i => i.is_primary);
+  const primaryHwName =
+    topology?.hat.name ||
+    primaryInterface?.card_name ||
+    detectedOutputs[0] ||
+    detectedInputs[0] ||
+    'ALSA Sound Hardware';
 
   return (
     <div className="appliance-dashboard">
@@ -351,9 +369,22 @@ export function ApplianceDashboard({ onOpenSettings }: ApplianceDashboardProps) 
             <RiSpeaker3Line size={18} />
           </div>
           <div className="hw-meta">
-            <span className="hw-label">Detected Audio Interface</span>
+            <span className="hw-label">Primary Audio Interface</span>
             <span className="hw-name">{primaryHwName}</span>
           </div>
+
+          <button
+            type="button"
+            className={`banner-map-toggle-btn ${isMapOpen ? 'active' : ''}`}
+            onClick={() => setIsMapOpen(!isMapOpen)}
+            title="Toggle Visual Raspberry Pi & Audio Interface Map"
+          >
+            <FiCpu size={14} />
+            <span>{isMapOpen ? 'Hide Hardware Map' : 'Hardware Map'}</span>
+            {topology?.interfaces && (
+              <span className="hw-count-badge">{topology.interfaces.length}</span>
+            )}
+          </button>
         </div>
 
         <div className="banner-stats">
@@ -374,7 +405,31 @@ export function ApplianceDashboard({ onOpenSettings }: ApplianceDashboardProps) 
         </div>
       </section>
 
-      {/* 2. Primary Audio Streams Section */}
+      {/* 2. Visual Hardware Map Section */}
+      {isMapOpen && (
+        <section className="dashboard-section hardware-map-section">
+          <PiHardwareMap
+            topology={topology}
+            activeStreams={currentStreams}
+            onAddStreamForDevice={(dev, mode) => {
+              setEditingStream({
+                id: `s-${Math.random().toString(16).slice(2, 10)}`,
+                mode: mode,
+                addr: '239.69.22.10',
+                port: 5004,
+                hw_device: dev,
+                net_device: netDevices[0] || 'eth0',
+                channels: 2,
+                format: 'S24BE',
+                enabled: false,
+              });
+              setIsModalOpen(true);
+            }}
+          />
+        </section>
+      )}
+
+      {/* 3. Primary Audio Streams Section */}
       <section className="dashboard-section">
         <div className="section-header">
           <div>
