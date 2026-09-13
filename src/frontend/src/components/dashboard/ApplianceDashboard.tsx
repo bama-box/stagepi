@@ -9,6 +9,7 @@ import {
   FiFileText,
   FiWifi,
   FiCpu,
+  FiClock,
 } from 'react-icons/fi';
 import { RiSpeaker3Line, RiAirplayLine, RiBluetoothLine } from 'react-icons/ri';
 import { HiOutlineMicrophone } from 'react-icons/hi2';
@@ -594,16 +595,72 @@ export function ApplianceDashboard({ onOpenSettings, ptpStatus, onOpenPtp }: App
         )}
       </section>
 
-      {/* 3. Auxiliary Services Bar (Quick Toggles) */}
+      {/* 3. System Services & Clocking Bar */}
       <section className="dashboard-section">
         <div className="section-header">
           <div>
-            <h2 className="section-title">Auxiliary Services</h2>
-            <p className="section-subtitle">Quick toggles for wireless audio receiver and connectivity services</p>
+            <h2 className="section-title">System Services & Clocking</h2>
+            <p className="section-subtitle">Real-time PTP clock synchronization, wireless audio receivers, and network connectivity</p>
           </div>
         </div>
 
         <div className="aux-services-grid">
+          {/* PTP Clock Tile */}
+          <div
+            className="aux-service-card ptp-card"
+            onClick={onOpenPtp}
+            style={{ cursor: onOpenPtp ? 'pointer' : 'default' }}
+            title="Click to configure PTP clock & operational profiles"
+          >
+            <div className="aux-card-left">
+              <div className={`aux-icon-wrapper ptp ${ptpStatus?.lock_status || 'inactive'}`}>
+                <FiClock size={20} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <h4 className="aux-name">PTP Clock</h4>
+                  <span className="aux-profile-tag">
+                    {ptpStatus?.profile ? ptpStatus.profile.toUpperCase() : 'AES67'}
+                  </span>
+                </div>
+                <span className="aux-status-text">
+                  {!ptpStatus?.service_active
+                    ? 'Daemon Inactive'
+                    : ptpStatus.lock_status === 'locked'
+                    ? `Locked • ${ptpStatus.master_offset_us} µs (Dom ${ptpStatus.domain})`
+                    : ptpStatus.lock_status === 'master'
+                    ? `Grandmaster (Dom ${ptpStatus.domain})`
+                    : ptpStatus.lock_status === 'syncing'
+                    ? `Acquiring Lock (Dom ${ptpStatus.domain})`
+                    : ptpStatus.lock_status === 'free_running'
+                    ? `Free-running (Dom ${ptpStatus.domain})`
+                    : `Active (Dom ${ptpStatus.domain})`}
+                </span>
+              </div>
+            </div>
+
+            <div className="aux-card-right" onClick={(e) => e.stopPropagation()}>
+              <span className={`aux-ptp-status-pill ${ptpStatus?.lock_status || 'inactive'}`}>
+                {ptpStatus?.lock_status === 'locked' && 'LOCKED'}
+                {ptpStatus?.lock_status === 'master' && 'GM'}
+                {ptpStatus?.lock_status === 'syncing' && 'SYNCING'}
+                {ptpStatus?.lock_status === 'free_running' && 'FREE'}
+                {ptpStatus?.lock_status === 'faulty' && 'FAULT'}
+                {(!ptpStatus || ptpStatus.lock_status === 'inactive') && 'STOPPED'}
+              </span>
+              {onOpenPtp && (
+                <button
+                  type="button"
+                  className="aux-config-btn"
+                  onClick={onOpenPtp}
+                  title="Configure PTP Clock"
+                >
+                  <FiSettings size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* AirPlay Tile */}
           <div className="aux-service-card">
             <div className="aux-card-left">
