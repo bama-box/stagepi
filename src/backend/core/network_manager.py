@@ -143,20 +143,21 @@ def _get_ip_info(interface: str):
     try:
         # Get all device properties
         dev_output = _run_nmcli_command(["-f", "all", "device", "show", interface])
-        dev_data = {k: v for k, v in (line.split(":", 1) for line in dev_output.split("\n"))}
+        dev_data = {k: v for k, v in (line.split(":", 1) for line in dev_output.splitlines() if ":" in line)}
 
-        # Check if the device is connected
-        if dev_data.get("GENERAL.STATE") != "100 (connected)":
+        # Check if the device is connected (state 100 is connected / connected externally)
+        state = dev_data.get("GENERAL.STATE", "")
+        if not state.startswith("100"):
             return {"connected": False}
 
         # Get the connection name first
         conn_name = dev_data.get("GENERAL.CONNECTION")
-        if not conn_name:
+        if not conn_name or conn_name == "--":
             return {"connected": False}  # No active connection profile
 
         # Get connection properties to retrieve configured IP (not device IPs)
         conn_output = _run_nmcli_command(["-f", "all", "connection", "show", conn_name])
-        conn_data = {k: v for k, v in (line.split(":", 1) for line in conn_output.split("\n"))}
+        conn_data = {k: v for k, v in (line.split(":", 1) for line in conn_output.splitlines() if ":" in line)}
 
         # Get the method (auto/manual)
         method = conn_data.get("ipv4.method", "unknown").strip()
@@ -167,28 +168,59 @@ def _get_ip_info(interface: str):
 
         # For manual (static) configuration, read from ipv4.addresses
         if method == "manual":
-            addresses = conn_data.get("ipv4.addresses", "").strip()
-            if addresses:
-                # Format is "192.168.1.100/24"
-                ip_data = addresses.split("/")
-                ip_address = ip_data[0] if len(ip_data) > 0 else ""
-                prefix = int(ip_data[1]) if len(ip_data) > 1 else 0
-                subnet_mask = ".".join([str((0xFFFFFFFF << (32 - prefix) >> i) & 0xFF) for i in [24, 16, 8, 0]])
+            raw_addresses = conn_data.get("ipv4.addresses", "").strip()
+            if raw_addresses:
+                # Can be multiple addresses, comma-separated: "169.254.x.x/16, 10.42.10.2/24"
+                addr_list = [a.strip() for a in raw_addresses.split(",") if a.strip()]
+                # Prioritize non-link-local addresses
+                chosen_addr = ""
+                for a in addr_list:
+                    if not a.startswith("169.254."):
+                        chosen_addr = a
+                        break
+                if not chosen_addr and addr_list:
+                    chosen_addr = addr_list[0]
+
+                if chosen_addr:
+                    ip_data = chosen_addr.split("/")
+                    ip_address = ip_data[0] if len(ip_data) > 0 else ""
+                    prefix = int(ip_data[1]) if len(ip_data) > 1 and ip_data[1].isdigit() else 0
+                    subnet_mask = ".".join([str((0xFFFFFFFF << (32 - prefix) >> i) & 0xFF) for i in [24, 16, 8, 0]])
+            else:
+                # Fallback to device-assigned IP if profile has no addresses
+                for i in range(1, 10):
+                    addr_val = dev_data.get(f"IP4.ADDRESS[{i}]", "")
+                    if addr_val:
+                        ip_data = addr_val.split("/")
+                        ip = ip_data[0] if len(ip_data) > 0 else ""
+                        if ip and not ip.startswith("169.254."):
+                            ip_address = ip
+                            prefix = int(ip_data[1]) if len(ip_data) > 1 and ip_data[1].isdigit() else 0
+                            subnet_mask = ".".join([str((0xFFFFFFFF << (32 - prefix) >> i) & 0xFF) for i in [24, 16, 8, 0]])
+                            break
         else:
             # For DHCP (auto), get the currently assigned IP from device
             # Filter out link-local addresses (169.254.x.x) by checking all IP4.ADDRESS entries
+            first_ip = ""
+            first_prefix = 0
             for i in range(1, 10):  # Check up to 10 IPs
                 addr_key = f"IP4.ADDRESS[{i}]"
                 addr_value = dev_data.get(addr_key, "")
                 if addr_value:
                     ip_data = addr_value.split("/")
                     ip = ip_data[0] if len(ip_data) > 0 else ""
+                    prefix = int(ip_data[1]) if len(ip_data) > 1 else 0
+                    if not first_ip:
+                        first_ip = ip
+                        first_prefix = prefix
                     # Skip link-local addresses (169.254.x.x)
                     if ip and not ip.startswith("169.254."):
                         ip_address = ip
-                        prefix = int(ip_data[1]) if len(ip_data) > 1 else 0
                         subnet_mask = ".".join([str((0xFFFFFFFF << (32 - prefix) >> i) & 0xFF) for i in [24, 16, 8, 0]])
                         break
+            if not ip_address and first_ip:
+                ip_address = first_ip
+                subnet_mask = ".".join([str((0xFFFFFFFF << (32 - first_prefix) >> i) & 0xFF) for i in [24, 16, 8, 0]])
 
         # Get gateway and DNS from connection profile
         gateway = conn_data.get("ipv4.gateway", "").strip()
@@ -199,7 +231,8 @@ def _get_ip_info(interface: str):
         if dns_servers:
             dns_list = [d.strip() for d in dns_servers.split(",") if d.strip()]
         else:
-            dns_list = [dev_data.get("IP4.DNS[1]", "").strip()]
+            raw_dns = dev_data.get("IP4.DNS[1]", "").strip()
+            dns_list = [raw_dns] if raw_dns else []
 
         ssid = dev_data.get("AP[1].SSID")
 
@@ -239,8 +272,23 @@ def set_ethernet_config(config):
     except RuntimeError as e:
         return {"error": str(e)}
 
-    # Convert subnet mask (e.g., 255.255.255.0) to CIDR prefix (e.g., 24)
-    prefix = sum(bin(int(x)).count("1") for x in config.subnetMask.split("."))
+    # Convert subnet mask (e.g., 255.255.255.0) or CIDR (e.g., 24, /24) to CIDR prefix
+    try:
+        mask_str = config.subnetMask.strip()
+        if "." in mask_str:
+            parts = [int(x) for x in mask_str.split(".")]
+            if len(parts) != 4 or not all(0 <= p <= 255 for p in parts):
+                return {"error": f"Invalid subnet mask: {config.subnetMask}"}
+            prefix = sum(bin(x).count("1") for x in parts)
+        else:
+            prefix = int(mask_str.lstrip("/"))
+            if not (0 <= prefix <= 32):
+                return {"error": f"Invalid CIDR prefix: {config.subnetMask}"}
+    except Exception:
+        return {"error": f"Invalid subnet mask: {config.subnetMask}"}
+
+    # Filter and clean DNS servers
+    dns_list = [d.strip() for d in (config.dnsServers or []) if d.strip()]
 
     # Construct the modification command
     mod_command = [
@@ -252,11 +300,14 @@ def set_ethernet_config(config):
         "ipv4.addresses",
         f"{config.ipAddress}/{prefix}",
         "ipv4.gateway",
-        config.gateway,
+        config.gateway or "",
         "ipv4.dns",
-        ",".join(config.dnsServers or []),
+        ",".join(dns_list),
     ]
-    _run_nmcli_command(mod_command)
+    try:
+        _run_nmcli_command(mod_command)
+    except RuntimeError as e:
+        return {"error": str(e)}
 
     # Re-apply the connection to make changes take effect
     try:
@@ -282,10 +333,15 @@ def reset_ethernet_config():
         "auto",
         "ipv4.addresses",
         "",
+        "ipv4.gateway",
+        "",
         "ipv4.dns",
         "",
     ]
-    _run_nmcli_command(mod_command)
+    try:
+        _run_nmcli_command(mod_command)
+    except RuntimeError as e:
+        return {"error": str(e)}
 
     try:
         _run_nmcli_command(["connection", "up", conn_name])

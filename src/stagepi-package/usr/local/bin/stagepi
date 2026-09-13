@@ -15,21 +15,21 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 case "$1" in
   status)
-    curl -s http://localhost:8000/system/status  | jq .
+    curl -s http://localhost/system/status  | jq .
     ;;
   resources)
     curl -s -X 'GET' \
-  'http://localhost:8000/system/resources' \
+  'http://localhost/system/resources' \
   -H 'accept: application/json' | jq .
     ;;
   wifi)
     curl -s -X 'GET' \
-  'http://localhost:8000/network/config/wifi' \
+  'http://localhost/network/config/wifi' \
   -H 'accept: application/json' | jq .
     ;;
    scan)
    curl -s -X 'GET' \
-  'http://localhost:8000/network/wifi/available' \
+  'http://localhost/network/wifi/available' \
   -H 'accept: application/json' | jq .
    ;;
    wifi_client)  
@@ -38,7 +38,7 @@ case "$1" in
      echo "Usage: wifi_client <unused> <SSID> <Password>"
    else
    curl -s -X PUT \
-    'http://localhost:8000/network/config/wifi' \
+    'http://localhost/network/config/wifi' \
     -H 'accept: application/json' \
     -H 'Content-Type: application/json' \
     -d "{
@@ -53,7 +53,7 @@ case "$1" in
   wifi_ap)
   SSID="Stagepi-$(hostname)"
   curl -s -X PUT \
-  'http://localhost:8000/network/config/wifi' \
+  'http://localhost/network/config/wifi' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d "{
@@ -67,7 +67,7 @@ case "$1" in
   ;;
   start_aes67)
   curl -s -X 'PATCH' \
-  'http://localhost:8000/services/aes67' \
+  'http://localhost/services/aes67' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d "{
@@ -78,7 +78,7 @@ case "$1" in
   ;;
   stop_aes67)
   curl -s -X 'PATCH' \
-  'http://localhost:8000/services/aes67' \
+  'http://localhost/services/aes67' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d "{

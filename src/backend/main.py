@@ -77,6 +77,13 @@ app.include_router(services_routes.router, prefix="/api/services", tags=["Servic
 app.include_router(sound_hw_routes.router, prefix="/api/sound", tags=["Sound"])
 app.include_router(streams_routes.router, prefix="/api/streams", tags=["Streams"])
 
+# Backward compatibility routes (legacy paths without /api)
+app.include_router(system_routes.router, prefix="/system", include_in_schema=False)
+app.include_router(network_routes.router, prefix="/network", include_in_schema=False)
+app.include_router(services_routes.router, prefix="/services", include_in_schema=False)
+app.include_router(sound_hw_routes.router, prefix="/sound", include_in_schema=False)
+app.include_router(streams_routes.router, prefix="/streams", include_in_schema=False)
+
 # NMOS Routes
 app.include_router(nmos_node_router, prefix="/x-nmos/node", tags=["NMOS Node"])
 app.include_router(nmos_conn_router, prefix="/x-nmos/connection", tags=["NMOS Connection"])

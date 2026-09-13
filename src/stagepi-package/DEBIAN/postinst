@@ -32,6 +32,11 @@ install -m 644 "$SOURCE_DIR/etc/shairport-sync.conf" /etc/
 install -d /etc/supervisor/conf.d
 install -m 644 "$SOURCE_DIR/etc/supervisor/conf.d/stagepi.conf" /etc/supervisor/conf.d/
 
+# Copy sysctl configuration (allowing unprivileged binding to port 80)
+install -d /etc/sysctl.d
+install -m 644 "$SOURCE_DIR/etc/sysctl.d/99-stagepi.conf" /etc/sysctl.d/
+sysctl -p /etc/sysctl.d/99-stagepi.conf 2>/dev/null || true
+
 # Copy systemd service files
 install -d /etc/systemd/system
 install -m 644 "$SOURCE_DIR/etc/systemd/system/stagepi-ble.service" /etc/systemd/system/

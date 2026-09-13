@@ -14,7 +14,7 @@ from .utils import generate_id, get_version_timestamp, get_tai_time
 logger = logging.getLogger(__name__)
 
 class NMOSNode:
-    def __init__(self, host: str = "0.0.0.0", port: int = 8000):
+    def __init__(self, host: str = "0.0.0.0", port: int = 80):
         self.host = host
         self.port = port
         self.hostname = socket.gethostname()

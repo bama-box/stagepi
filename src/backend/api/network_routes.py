@@ -34,7 +34,7 @@ router = APIRouter()
 class EthernetStaticConfig(BaseModel):
     ipAddress: str
     subnetMask: str
-    gateway: str
+    gateway: Optional[str] = ""
     dnsServers: Optional[list[str]] = None
 
 
