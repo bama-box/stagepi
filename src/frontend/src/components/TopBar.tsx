@@ -2,18 +2,14 @@ import { GiSoundOn } from "react-icons/gi";
 import { FaFingerprint } from "react-icons/fa";
 import { FiBell, FiSettings } from 'react-icons/fi';
 import { useNotification } from '../context/NotificationContext';
-import { PtpStatusPill } from './ptp/PtpStatusPill';
-import type { PtpStatus } from '../types';
 import './TopBar.css';
 
 interface TopBarProps {
   deviceId: string;
-  ptpStatus?: PtpStatus | null;
   onOpenSettings: () => void;
-  onOpenPtp?: () => void;
 }
 
-export function TopBar({ deviceId, ptpStatus = null, onOpenSettings, onOpenPtp }: TopBarProps) {
+export function TopBar({ deviceId, onOpenSettings }: TopBarProps) {
   const { toggleDrawer, unreadCount, unreadErrorCount } = useNotification();
 
   const hasErrors = unreadErrorCount > 0;
@@ -32,14 +28,6 @@ export function TopBar({ deviceId, ptpStatus = null, onOpenSettings, onOpenPtp }
       </div>
 
       <div className="top-bar-right">
-        {/* PTP Clock Status Indicator */}
-        {onOpenPtp && (
-          <PtpStatusPill
-            status={ptpStatus}
-            onClick={onOpenPtp}
-          />
-        )}
-
         {/* Device ID / Fingerprint */}
         <div className="device-info" title={`Hardware ID: ${deviceId}`}>
           <FaFingerprint size={14} />

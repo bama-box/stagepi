@@ -4,7 +4,6 @@ import {
   FiTv,
   FiPlus,
   FiInfo,
-  FiClock,
 } from 'react-icons/fi';
 import { RiSpeaker3Line } from 'react-icons/ri';
 import { GiSoundWaves } from 'react-icons/gi';
@@ -48,7 +47,6 @@ interface PiHardwareMapProps {
   activeStreams: Stream[];
   ptpStatus?: PtpStatus | null;
   onAddStreamForDevice?: (device: string, mode: 'input' | 'output') => void;
-  onOpenPtp?: () => void;
 }
 
 export function PiHardwareMap({
@@ -56,7 +54,6 @@ export function PiHardwareMap({
   activeStreams,
   ptpStatus,
   onAddStreamForDevice,
-  onOpenPtp,
 }: PiHardwareMapProps) {
   const [selectedPortId, setSelectedPortId] = useState<string>('gpio_hat');
 
@@ -542,20 +539,6 @@ export function PiHardwareMap({
                 <span className="stat-val">{ptpStatus?.profile_name || 'AES67 Media Profile'}</span>
               </div>
             </div>
-
-            {onOpenPtp && (
-              <div className="connector-bar-actions">
-                <button
-                  type="button"
-                  className="connector-action-btn"
-                  onClick={onOpenPtp}
-                  title="Configure PTP profiles and inspect clock synchronization"
-                >
-                  <FiClock size={16} />
-                  <span>Configure PTP Clock</span>
-                </button>
-              </div>
-            )}
           </div>
         ) : selectedInterface ? (
           <div className="focused-connector-bar">

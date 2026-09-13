@@ -99,9 +99,7 @@ export function App() {
         {/* Top Header */}
         <TopBar
           deviceId={deviceId}
-          ptpStatus={ptpStatus}
           onOpenSettings={() => handleOpenSettings()}
-          onOpenPtp={() => setIsPtpModalOpen(true)}
         />
 
         {/* Main Appliance Dashboard */}
