@@ -157,7 +157,7 @@ export const PtpModal: React.FC<PtpModalProps> = ({
         <div className="ptp-modal-header">
           <div className="ptp-header-left">
             <div className="ptp-header-icon-pill">
-              <FiClock size={22} color="#f59e0b" />
+              <FiClock size={22} color="#c084fc" />
             </div>
             <div>
               <h3 className="ptp-modal-title">PTP Clock Synchronization</h3>

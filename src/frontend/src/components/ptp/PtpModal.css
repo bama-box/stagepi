@@ -61,8 +61,8 @@
   width: 44px;
   height: 44px;
   border-radius: 10px;
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -317,8 +317,8 @@
 }
 
 .ptp-profile-card.selected {
-  border-color: #f59e0b;
-  background: rgba(245, 158, 11, 0.08);
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.08);
 }
 
 .profile-radio-row {
@@ -393,7 +393,7 @@
 
 .domain-input:focus {
   outline: none;
-  border-color: #f59e0b;
+  border-color: #a855f7;
 }
 
 /* Footer */
@@ -452,9 +452,9 @@
 }
 
 .ptp-primary-btn {
-  background: #f59e0b;
-  border: 1px solid #d97706;
-  color: #000;
+  background: #a855f7;
+  border: 1px solid #9333ea;
+  color: #fff;
   padding: 0.6rem 1.25rem;
   border-radius: 8px;
   font-size: 0.82rem;
@@ -464,9 +464,9 @@
 }
 
 .ptp-primary-btn:hover:not(:disabled) {
-  background: #fbbf24;
+  background: #c084fc;
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
 }
 
 .ptp-primary-btn:disabled,
