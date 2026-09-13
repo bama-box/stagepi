@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FiClock,
   FiCheckCircle,
@@ -31,25 +31,26 @@ export const PtpModal: React.FC<PtpModalProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const hasUserInteracted = useRef<boolean>(false);
 
-  // Sync initialStatus when passed
+  // Initialize form selection ONLY when modal opens (not on background polls)
   useEffect(() => {
-    if (initialStatus) {
+    if (isOpen) {
+      hasUserInteracted.current = false;
+      const activeProf = initialStatus?.profile || 'aes67';
+      const activeDom = initialStatus?.domain ?? 0;
       setStatus(initialStatus);
-      setSelectedProfileId(initialStatus.profile || 'aes67');
-      setCustomDomain(initialStatus.domain || 0);
+      setSelectedProfileId(activeProf);
+      setCustomDomain(activeDom);
+      setMessage(null);
+
+      fetchInitialData(!initialStatus);
+      const interval = setInterval(fetchPtpStatus, 3000);
+      return () => clearInterval(interval);
     }
-  }, [initialStatus]);
-
-  // Fetch status and profiles on open
-  useEffect(() => {
-    if (!isOpen) return;
-
-    fetchPtpData();
-    const interval = setInterval(fetchPtpStatus, 3000);
-    return () => clearInterval(interval);
   }, [isOpen]);
 
+  // Background status poll: updates telemetry ONLY, never overwrites user's draft form selection
   const fetchPtpStatus = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/ptp/status`);
@@ -63,7 +64,7 @@ export const PtpModal: React.FC<PtpModalProps> = ({
     }
   };
 
-  const fetchPtpData = async () => {
+  const fetchInitialData = async (shouldInitForm: boolean = false) => {
     setLoading(true);
     try {
       const [statusRes, profilesRes] = await Promise.all([
@@ -74,8 +75,10 @@ export const PtpModal: React.FC<PtpModalProps> = ({
       if (statusRes.ok) {
         const statusData: PtpStatus = await statusRes.json();
         setStatus(statusData);
-        setSelectedProfileId(statusData.profile || 'aes67');
-        setCustomDomain(statusData.domain || 0);
+        if (shouldInitForm && !hasUserInteracted.current) {
+          setSelectedProfileId(statusData.profile || 'aes67');
+          setCustomDomain(statusData.domain ?? 0);
+        }
         if (onStatusUpdated) onStatusUpdated(statusData);
       }
 
@@ -113,6 +116,14 @@ export const PtpModal: React.FC<PtpModalProps> = ({
         setStatus(resData.current_status);
         if (onStatusUpdated) onStatusUpdated(resData.current_status);
       }
+
+      // Re-fetch profiles so the 'ACTIVE' pill reflects the newly active profile
+      fetch(`${API_BASE_URL}/ptp/profiles`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((profs) => {
+          if (profs) setProfiles(profs);
+        })
+        .catch(() => {});
     } catch (err: any) {
       setMessage({ text: err.message || 'Error updating PTP profile', type: 'error' });
     } finally {
@@ -246,26 +257,31 @@ export const PtpModal: React.FC<PtpModalProps> = ({
           <div className="ptp-profiles-grid">
             {profiles.map((p) => {
               const isSelected = selectedProfileId === p.id;
+              const radioId = `ptp-profile-${p.id}`;
+              const selectThisProfile = () => {
+                hasUserInteracted.current = true;
+                setSelectedProfileId(p.id);
+                setCustomDomain(p.domain);
+              };
+
               return (
                 <div
                   key={p.id}
                   className={`ptp-profile-card ${isSelected ? 'selected' : ''}`}
-                  onClick={() => {
-                    setSelectedProfileId(p.id);
-                    setCustomDomain(p.domain);
-                  }}
+                  onClick={selectThisProfile}
                 >
                   <div className="profile-radio-row">
                     <input
                       type="radio"
+                      id={radioId}
                       name="ptp-profile"
+                      value={p.id}
                       checked={isSelected}
-                      onChange={() => {
-                        setSelectedProfileId(p.id);
-                        setCustomDomain(p.domain);
-                      }}
+                      onChange={selectThisProfile}
                     />
-                    <span className="profile-card-name">{p.name}</span>
+                    <label htmlFor={radioId} className="profile-card-name" onClick={(e) => e.stopPropagation()}>
+                      {p.name}
+                    </label>
                     {p.is_active && <span className="profile-active-pill">ACTIVE</span>}
                   </div>
                   <p className="profile-card-desc">{p.description}</p>
@@ -292,7 +308,10 @@ export const PtpModal: React.FC<PtpModalProps> = ({
               min={0}
               max={127}
               value={customDomain}
-              onChange={(e) => setCustomDomain(parseInt((e.target as HTMLInputElement).value, 10) || 0)}
+              onChange={(e) => {
+                hasUserInteracted.current = true;
+                setCustomDomain(parseInt((e.target as HTMLInputElement).value, 10) || 0);
+              }}
               className="domain-input"
             />
           </div>
