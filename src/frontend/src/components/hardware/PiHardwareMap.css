@@ -1,20 +1,20 @@
-/* PiHardwareMap.css */
-.pi-hardware-map-container {
-  background: #121319;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 1.5rem;
+/* PiHardwareMap.css - 3D Industrial Stagebox Theme */
+.pi-hardware-map-container.stagebox-theme {
+  background: #0f1016;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 1.75rem;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  animation: map-fade-in 0.25s ease-out;
+  gap: 1.5rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  animation: stagebox-fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes map-fade-in {
+@keyframes stagebox-fade-in {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-10px);
   }
   to {
     opacity: 1;
@@ -28,78 +28,107 @@
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  gap: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .hw-board-info {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.35rem;
+}
+
+.hw-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .hw-board-badge {
-  align-self: flex-start;
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 2px 8px;
-  background: rgba(96, 165, 250, 0.12);
+  background: rgba(96, 165, 250, 0.15);
   color: #60a5fa;
   border-radius: 4px;
-  border: 1px solid rgba(96, 165, 250, 0.25);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+}
+
+.hw-chassis-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-radius: 4px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
 .hw-board-model {
   margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1.4rem;
+  font-weight: 800;
   color: #f4f4f5;
   letter-spacing: -0.01em;
 }
 
 .hw-soc-label {
-  font-size: 0.8rem;
-  color: #a1a1aa;
+  font-size: 0.85rem;
+  color: #94a3b8;
 }
 
 /* HAT Status Pill */
 .hat-detected-pill {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  padding: 0.5rem 1rem;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  padding: 0.6rem 1.25rem;
   border-radius: 9999px;
+  transition: all 0.2s ease;
+}
+
+.hat-detected-pill.stream-live {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.45);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
 }
 
 .hat-detected-pill.no-hat {
   background: rgba(255, 255, 255, 0.04);
   border-color: rgba(255, 255, 255, 0.1);
   color: #a1a1aa;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
 }
 
 .hat-pulse-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 10px #10b981;
-  animation: hat-pulse 2s infinite;
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
 }
 
-@keyframes hat-pulse {
+.hat-pulse-dot.live {
+  background: #10b981;
+  box-shadow: 0 0 12px #10b981;
+  animation: live-pulse 1.8s infinite;
+}
+
+@keyframes live-pulse {
   0%, 100% {
-    opacity: 1;
     transform: scale(1);
+    opacity: 1;
   }
   50% {
-    opacity: 0.4;
-    transform: scale(1.2);
+    transform: scale(1.3);
+    opacity: 0.5;
   }
 }
 
@@ -117,54 +146,62 @@
 }
 
 .hat-title {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #f4f4f5;
 }
 
-/* Schematic Layout: Board Canvas + Inspector Panel */
-.hardware-schematic-layout {
+/* Hero Stagebox 3D Section */
+.stagebox-hero-wrapper {
   display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 1.5rem;
-  align-items: start;
+  grid-template-columns: 1fr 340px;
+  gap: 1.75rem;
+  align-items: center;
 }
 
-@media (max-width: 960px) {
-  .hardware-schematic-layout {
+@media (max-width: 1080px) {
+  .stagebox-hero-wrapper {
     grid-template-columns: 1fr;
   }
 }
 
-/* SVG Schematic Board */
-.board-schematic-wrapper {
-  background: #090a0f;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  padding: 1.25rem;
+.stagebox-canvas-container {
+  background: radial-gradient(circle at 50% 50%, #151620 0%, #08090d 85%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1.5rem 1rem;
   display: flex;
   justify-content: center;
   align-items: center;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.6);
+  min-height: 420px;
 }
 
-.pi-board-svg {
+.stagebox-chassis-svg {
   width: 100%;
-  max-width: 720px;
+  max-width: 860px;
   height: auto;
-  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.4));
   user-select: none;
 }
 
-.clickable-schematic-port {
+.clickable-chassis-part {
   transition: all 0.2s ease;
 }
 
-.clickable-schematic-port:hover rect {
+.clickable-chassis-part:hover polygon,
+.clickable-chassis-part:hover ellipse {
   stroke: #f59e0b !important;
   stroke-width: 2.5px !important;
+}
+
+.clickable-subport {
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clickable-subport:hover rect {
+  stroke: #f59e0b !important;
+  stroke-width: 2px !important;
 }
 
 /* Inspector Panel */
@@ -174,13 +211,14 @@
 }
 
 .inspector-card {
-  background: #181922;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  padding: 1.25rem;
+  background: #15161f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .inspector-card.empty {
@@ -188,21 +226,21 @@
   justify-content: center;
   text-align: center;
   color: #71717a;
-  min-height: 200px;
+  min-height: 240px;
 }
 
 .inspector-header {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 1rem;
 }
 
 .inspector-icon-pill {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -212,7 +250,7 @@
 .inspector-title-group {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
   overflow: hidden;
 }
 
@@ -220,14 +258,14 @@
   font-size: 0.68rem;
   font-weight: 700;
   color: #f59e0b;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .inspector-name {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.15rem;
+  font-weight: 800;
   color: #f4f4f5;
   white-space: nowrap;
   overflow: hidden;
@@ -238,20 +276,20 @@
 .inspector-details-table {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .inspector-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.65rem 0;
+  padding: 0.75rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 0.85rem;
+  font-size: 0.88rem;
 }
 
 .inspector-row .row-label {
-  color: #71717a;
+  color: #94a3b8;
   font-weight: 500;
 }
 
@@ -287,7 +325,7 @@
 
 @keyframes dot-glow {
   0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
-  50% { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+  50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
 }
 
 .idle-streams-tag {
@@ -295,7 +333,7 @@
   font-weight: 500;
 }
 
-/* Inspector Actions */
+/* Inspector Action Button */
 .inspector-actions {
   display: flex;
   flex-direction: column;
@@ -306,61 +344,63 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.45);
   color: #fbbf24;
-  padding: 0.65rem 1rem;
+  padding: 0.75rem 1rem;
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .inspector-action-btn:hover {
-  background: rgba(245, 158, 11, 0.25);
-  border-color: rgba(245, 158, 11, 0.6);
+  background: rgba(245, 158, 11, 0.3);
+  border-color: rgba(245, 158, 11, 0.7);
   color: #fff;
   transform: translateY(-1px);
 }
 
-/* Interfaces Grid List */
+/* Interfaces Grid List (Bottom Rack Mount Bar) */
 .interfaces-grid-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.85rem;
+  padding-top: 0.5rem;
 }
 
 .interface-chip-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
-  background: #16171f;
+  padding: 0.85rem 1.15rem;
+  background: #14151e;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .interface-chip-card:hover {
-  background: #1d1f2a;
-  border-color: rgba(255, 255, 255, 0.15);
+  background: #1b1d2a;
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .interface-chip-card.selected {
   border-color: #f59e0b;
-  background: rgba(245, 158, 11, 0.08);
+  background: rgba(245, 158, 11, 0.1);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.15);
 }
 
 .interface-chip-card.active {
-  border-color: rgba(16, 185, 129, 0.4);
+  border-color: rgba(16, 185, 129, 0.5);
 }
 
 .chip-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   overflow: hidden;
 }
 
@@ -377,18 +417,18 @@
 .chip-text {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.2rem;
   overflow: hidden;
 }
 
 .chip-name-row {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
 .chip-name {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #f4f4f5;
   white-space: nowrap;
@@ -397,31 +437,41 @@
 }
 
 .primary-pill {
-  font-size: 0.6rem;
+  font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
   color: #10b981;
   background: rgba(16, 185, 129, 0.15);
-  padding: 1px 5px;
-  border-radius: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.network-pill {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .chip-port-desc {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: #71717a;
   font-family: monospace;
 }
 
 .chip-status-dot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .chip-status-dot.running {
   background: #10b981;
-  box-shadow: 0 0 8px #10b981;
+  box-shadow: 0 0 10px #10b981;
 }
 
 .chip-status-dot.idle {
