@@ -26,7 +26,7 @@ export const PtpModal: React.FC<PtpModalProps> = ({
 }) => {
   const [status, setStatus] = useState<PtpStatus | null>(initialStatus);
   const [profiles, setProfiles] = useState<PtpProfile[]>([]);
-  const [selectedProfileId, setSelectedProfileId] = useState<string>('ravenna');
+  const [selectedProfileId, setSelectedProfileId] = useState<string>('aes67');
   const [customDomain, setCustomDomain] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
@@ -36,7 +36,7 @@ export const PtpModal: React.FC<PtpModalProps> = ({
   useEffect(() => {
     if (initialStatus) {
       setStatus(initialStatus);
-      setSelectedProfileId(initialStatus.profile || 'ravenna');
+      setSelectedProfileId(initialStatus.profile || 'aes67');
       setCustomDomain(initialStatus.domain || 0);
     }
   }, [initialStatus]);
@@ -74,7 +74,7 @@ export const PtpModal: React.FC<PtpModalProps> = ({
       if (statusRes.ok) {
         const statusData: PtpStatus = await statusRes.json();
         setStatus(statusData);
-        setSelectedProfileId(statusData.profile || 'ravenna');
+        setSelectedProfileId(statusData.profile || 'aes67');
         setCustomDomain(statusData.domain || 0);
         if (onStatusUpdated) onStatusUpdated(statusData);
       }

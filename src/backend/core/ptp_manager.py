@@ -28,27 +28,15 @@ PTP4L_SOCKET = "/var/run/ptp4l"
 
 # Supported PTP Profiles for AoIP / Broadcast
 PTP_PROFILES = {
-    "ravenna": {
-        "id": "ravenna",
-        "name": "RAVENNA PTP Profile",
-        "description": "Optimized for RAVENNA AoIP networks (Domain 0, 8 sync pkts/s, E2E)",
+    "aes67": {
+        "id": "aes67",
+        "name": "AES67 Media Profile (IEEE 1588-2008 Annex J)",
+        "description": "Standard AES67 Audio-over-IP Profile (Domain 0, 8 sync pkts/s, E2E)",
         "domain": 0,
         "logSyncInterval": -3,       # 8 packets/sec
         "logAnnounceInterval": 0,    # 1 packet/sec
         "announceReceiptTimeout": 3,
         "logMinDelayReqInterval": -3,# 8 packets/sec
-        "delay_mechanism": "E2E",
-        "network_transport": "UDPv4",
-    },
-    "aes67": {
-        "id": "aes67",
-        "name": "AES67 Media Profile (IEEE 1588-2008 Annex J)",
-        "description": "Standard AES67 Audio-over-IP Profile (Domain 0, 8 sync pkts/s, 1 ann/2s)",
-        "domain": 0,
-        "logSyncInterval": -3,       # 8 packets/sec
-        "logAnnounceInterval": 1,    # 1 packet/2 sec
-        "announceReceiptTimeout": 3,
-        "logMinDelayReqInterval": 0, # 1 packet/sec
         "delay_mechanism": "E2E",
         "network_transport": "UDPv4",
     },
@@ -215,9 +203,7 @@ def detect_active_profile() -> str:
 
         if domain == 127:
             return "smpte"
-        if domain == 0 and sync_int == -3 and ann_int == 0:
-            return "ravenna"
-        if domain == 0 and sync_int == -3 and ann_int == 1:
+        if domain == 0 and sync_int == -3:
             return "aes67"
         return "default"
     except Exception as e:

@@ -25,18 +25,17 @@ This document tracks planned features, architectural improvements, and pending t
   - Integrate PTP clock distribution into GStreamer AES67 pipelines (`ptp4l` / `phc2sys`).
   - Implement full AES67 clocking compliance for synchronized multi-device playback.
 
-- [ ] **RAVENNA PTP Profile & Clock Synchronization Option**
+- [x] **PTP Clocking & Profile Management (IEEE 1588-2008 / AES67 / ptp4l)**
   - **PTP Profile Selection**:
     - Support configurable PTP operational profiles via `ptp4l`:
-      - **RAVENNA PTP Profile**: Standard RAVENNA parameters (Domain 0, sync interval at 8 or 16 pkt/sec, announce interval 1s, delay request mechanism E2E).
-      - **AES67 Standard Profile**: IEEE 1588-2008 Annex J compliant.
+      - **AES67 Media Profile**: IEEE 1588-2008 Annex J compliant (Domain 0, 8 pkt/sec, announce interval 1s, delay request mechanism E2E).
       - **SMPTE ST 2059-2 Profile**: Broadcast synchronization profile (Domain 127).
       - **Default PTPv2**: Generic IEEE 1588-2008.
-  - **GStreamer Pipeline Time Synchronization**:
-    - Feed the PTP reference clock directly to GStreamer using `GstPtpClock` or discipline the ALSA audio clock via `phc2sys` and kernel timestamping.
-    - Align RTP timestamps with PTP absolute time (TAI/epoch) to achieve sample-accurate alignment with RAVENNA and Dante AES67 devices.
   - **PTP Status Monitoring in Web UI**:
     - Display real-time PTP status in the UI (Grandmaster ID, offset from master, clock jitter, lock status: Locked / Synchronizing / Free-Running).
+  - [ ] **GStreamer Pipeline Time Synchronization**:
+    - Feed the PTP reference clock directly to GStreamer using `GstPtpClock` or discipline the ALSA audio clock via `phc2sys` and kernel timestamping.
+    - Align RTP timestamps with PTP absolute time (TAI/epoch) to achieve sample-accurate alignment with networked AES67 devices.
 
 - [ ] **NMOS Control Plane (AMWA IS-04 & IS-05)**
   - Expand NMOS Node, Device, Source, and Flow registration (IS-04).

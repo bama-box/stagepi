@@ -22,7 +22,7 @@ router = APIRouter()
 
 
 class ApplyProfileRequest(BaseModel):
-    profile_id: str = Field(..., description="PTP Profile ID: 'ravenna', 'aes67', 'smpte', 'default'")
+    profile_id: str = Field(..., description="PTP Profile ID: 'aes67', 'smpte', 'default'")
     domain: Optional[int] = Field(None, ge=0, le=127, description="Optional custom PTP domain number (0-127)")
 
 
@@ -37,7 +37,7 @@ def get_ptp_status():
 
 @router.get("/profiles")
 def get_ptp_profiles():
-    """List available PTP operational profiles (RAVENNA, AES67, SMPTE, Default)."""
+    """List available PTP operational profiles (AES67, SMPTE, Default)."""
     try:
         return ptp_manager.get_available_profiles()
     except Exception as e:

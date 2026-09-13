@@ -42,7 +42,7 @@ offering a flexible alternative, enabling users to build their own digital audio
 - **Network Audio Protocols**:  
   - OSC  
   - Custom UDP/TCP for control  
-  - Professional-grade uncompressed audio networking compatible with AES67 enabled systems such as Dante, RAVENNA, Livewire+, WheatNet-IP, Q-LAN
+  - Professional-grade uncompressed audio networking compatible with AES67 enabled systems such as Dante, Livewire+, WheatNet-IP, Q-LAN
 ## Getting Started
 
 ### Prerequisites

@@ -172,7 +172,7 @@ export function SettingsDrawer({ isOpen, onClose, initialTab, deviceId }: Settin
                   <div className="about-badge">StagePi Appliance</div>
                   <h3>StagePi Audio Node</h3>
                   <p className="about-desc">
-                    Ultra-low latency AES67 / Ravenna and multi-protocol network audio endpoint for Raspberry Pi.
+                    Ultra-low latency AES67 / NMOS and multi-protocol network audio endpoint for Raspberry Pi.
                   </p>
                 </div>
 
@@ -187,7 +187,7 @@ export function SettingsDrawer({ isOpen, onClose, initialTab, deviceId }: Settin
                   </div>
                   <div className="about-row">
                     <span className="about-label">Supported Protocols</span>
-                    <span className="about-val">AES67 RTP, SAP, Ravenna, AirPlay, Bluetooth</span>
+                    <span className="about-val">AES67 RTP, SAP, NMOS, AirPlay, Bluetooth</span>
                   </div>
                   <div className="about-row">
                     <span className="about-label">Supported Sample Rates</span>

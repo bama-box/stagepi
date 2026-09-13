@@ -539,7 +539,7 @@ export function PiHardwareMap({
 
               <div className="connector-stat-item">
                 <span className="stat-label">Active Profile</span>
-                <span className="stat-val">{ptpStatus?.profile_name || 'RAVENNA / AES67'}</span>
+                <span className="stat-val">{ptpStatus?.profile_name || 'AES67 Media Profile'}</span>
               </div>
             </div>
 
