@@ -139,7 +139,7 @@ export function PiHardwareMap({
         <div className="stagebox-canvas-container">
           <svg
             className="stagebox-chassis-svg"
-            viewBox="0 0 920 540"
+            viewBox="160 15 605 480"
             xmlns="http://www.w3.org/2000/svg"
           >
             <defs>
@@ -211,7 +211,7 @@ export function PiHardwareMap({
             </defs>
 
             {/* Drop Shadow Under Enclosure */}
-            <ellipse cx="480" cy="485" rx="380" ry="40" fill="rgba(0,0,0,0.7)" filter="url(#chassisShadow)" />
+            <ellipse cx="465" cy="460" rx="290" ry="25" fill="rgba(0,0,0,0.6)" filter="url(#chassisShadow)" />
 
             {/* ======================================================== */}
             {/* 1. TOP PLATE (Isometric parallelogram)                     */}
@@ -484,90 +484,82 @@ export function PiHardwareMap({
           </svg>
         </div>
 
-        {/* Port Detail Inspector Sidebar */}
-        <div className="port-inspector-panel">
-          {selectedInterface ? (
-            <div className="inspector-card">
-              <div className="inspector-header">
-                <div className="inspector-icon-pill">
-                  {selectedInterface.type === 'hat' && <RiSpeaker3Line size={24} color="#f59e0b" />}
-                  {selectedInterface.type === 'jack' && <FiHeadphones size={24} color="#60a5fa" />}
-                  {selectedInterface.type === 'hdmi' && <FiTv size={24} color="#a78bfa" />}
-                  {selectedInterface.type === 'usb' && <BsUsbSymbol size={24} color="#38bdf8" />}
-                  {selectedInterface.type === 'other' && <GiSoundWaves size={24} color="#34d399" />}
-                </div>
-
-                <div className="inspector-title-group">
-                  <div className="inspector-type-badge">
-                    {selectedInterface.type.toUpperCase()} • {selectedInterface.port}
-                  </div>
-                  <h4 className="inspector-name">{selectedInterface.card_name}</h4>
-                </div>
+        {/* Focused Connector Inspector Bar (Horizontal, taking NO side space) */}
+        {selectedInterface ? (
+          <div className="focused-connector-bar">
+            <div className="connector-bar-main">
+              <div className="connector-bar-icon-pill">
+                {selectedInterface.type === 'hat' && <RiSpeaker3Line size={24} color="#f59e0b" />}
+                {selectedInterface.type === 'jack' && <FiHeadphones size={24} color="#60a5fa" />}
+                {selectedInterface.type === 'hdmi' && <FiTv size={24} color="#a78bfa" />}
+                {selectedInterface.type === 'usb' && <BsUsbSymbol size={24} color="#38bdf8" />}
+                {selectedInterface.type === 'other' && <GiSoundWaves size={24} color="#34d399" />}
               </div>
 
-              <div className="inspector-details-table">
-                <div className="inspector-row">
-                  <span className="row-label">Physical Interface</span>
-                  <span className="row-val">
+              <div className="connector-bar-info">
+                <div className="connector-bar-tags">
+                  <span className="connector-type-badge">{selectedInterface.type.toUpperCase()}</span>
+                  <span className="connector-port-badge">
                     {selectedInterface.type === 'hat'
                       ? 'Dual Balanced XLR Outputs'
                       : selectedInterface.port}
                   </span>
+                  <span className="connector-alsa-badge">{selectedInterface.alsa_device}</span>
                 </div>
-                <div className="inspector-row">
-                  <span className="row-label">ALSA Device Path</span>
-                  <span className="row-val mono">{selectedInterface.alsa_device}</span>
-                </div>
-                <div className="inspector-row">
-                  <span className="row-label">Signal Duplex</span>
-                  <span className="row-val">
-                    {selectedInterface.playback && selectedInterface.capture
-                      ? 'Full Duplex (In + Out)'
-                      : selectedInterface.playback
-                      ? 'Stereo Playback (Output)'
-                      : 'Audio Capture (Input)'}
-                  </span>
-                </div>
-                <div className="inspector-row">
-                  <span className="row-label">Active AoIP Streams</span>
-                  <span className="row-val">
-                    {selectedStreams.length > 0 ? (
-                      <span className="active-streams-tag">
-                        <span className="dot pulse" /> {selectedStreams.length} Running
-                      </span>
-                    ) : (
-                      <span className="idle-streams-tag">Idle (0 streams)</span>
-                    )}
-                  </span>
-                </div>
+                <h4 className="connector-bar-title">{selectedInterface.card_name}</h4>
+              </div>
+            </div>
+
+            <div className="connector-bar-stats">
+              <div className="connector-stat-item">
+                <span className="stat-label">Direction</span>
+                <span className="stat-val">
+                  {selectedInterface.playback && selectedInterface.capture
+                    ? 'Full Duplex (In + Out)'
+                    : selectedInterface.playback
+                    ? 'Stereo Playback (Output)'
+                    : 'Capture (Input)'}
+                </span>
               </div>
 
-              {/* Quick Stream Action */}
-              {onAddStreamForDevice && (
-                <div className="inspector-actions">
-                  <button
-                    type="button"
-                    className="inspector-action-btn"
-                    onClick={() =>
-                      onAddStreamForDevice(
-                        selectedInterface.card_id,
-                        selectedInterface.playback ? 'output' : 'input'
-                      )
-                    }
-                  >
-                    <FiPlus size={16} />
-                    <span>Create Stream on {selectedInterface.card_name}</span>
-                  </button>
-                </div>
-              )}
+              <div className="connector-stat-item">
+                <span className="stat-label">Active Streams</span>
+                <span className="stat-val">
+                  {selectedStreams.length > 0 ? (
+                    <span className="active-streams-tag">
+                      <span className="dot pulse" /> {selectedStreams.length} Running
+                    </span>
+                  ) : (
+                    <span className="idle-streams-tag">Idle</span>
+                  )}
+                </span>
+              </div>
             </div>
-          ) : (
-            <div className="inspector-card empty">
-              <FiInfo size={28} />
-              <p>Click any connector on the stagebox chassis to inspect port details.</p>
-            </div>
-          )}
-        </div>
+
+            {onAddStreamForDevice && (
+              <div className="connector-bar-actions">
+                <button
+                  type="button"
+                  className="connector-action-btn"
+                  onClick={() =>
+                    onAddStreamForDevice(
+                      selectedInterface.card_id,
+                      selectedInterface.playback ? 'output' : 'input'
+                    )
+                  }
+                >
+                  <FiPlus size={16} />
+                  <span>Create Stream on {selectedInterface.card_name}</span>
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="focused-connector-bar empty">
+            <FiInfo size={20} />
+            <span>Click any connector on the stagebox chassis to inspect port details.</span>
+          </div>
+        )}
       </div>
 
       {/* Rack Mount Connector Chips Bar */}

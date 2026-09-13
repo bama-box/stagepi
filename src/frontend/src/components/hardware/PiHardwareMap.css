@@ -153,16 +153,11 @@
 
 /* Hero Stagebox 3D Section */
 .stagebox-hero-wrapper {
-  display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 1.75rem;
-  align-items: center;
-}
-
-@media (max-width: 1080px) {
-  .stagebox-hero-wrapper {
-    grid-template-columns: 1fr;
-  }
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 1.25rem;
+  align-items: stretch;
 }
 
 .stagebox-canvas-container {
@@ -174,12 +169,13 @@
   justify-content: center;
   align-items: center;
   box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.6);
-  min-height: 420px;
+  min-height: 480px;
+  width: 100%;
 }
 
 .stagebox-chassis-svg {
   width: 100%;
-  max-width: 860px;
+  max-width: 960px;
   height: auto;
   user-select: none;
 }
@@ -204,104 +200,115 @@
   stroke-width: 2px !important;
 }
 
-/* Inspector Panel */
-.port-inspector-panel {
+/* Focused Connector Bar: Horizontal Ribbon */
+.focused-connector-bar {
   display: flex;
-  flex-direction: column;
-}
-
-.inspector-card {
-  background: #15161f;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  background: #14151e;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  padding: 1rem 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
-.inspector-card.empty {
+.focused-connector-bar.empty {
+  display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
+  gap: 0.75rem;
   color: #71717a;
-  min-height: 240px;
+  font-size: 0.9rem;
+  padding: 1.2rem 1.5rem;
+  min-height: 60px;
 }
 
-.inspector-header {
+.connector-bar-main {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.inspector-icon-pill {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+.connector-bar-icon-pill {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #f59e0b;
   flex-shrink: 0;
 }
 
-.inspector-title-group {
+.connector-bar-info {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  overflow: hidden;
 }
 
-.inspector-type-badge {
-  font-size: 0.68rem;
+.connector-bar-tags {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.connector-type-badge {
+  font-size: 0.65rem;
   font-weight: 700;
   color: #f59e0b;
-  letter-spacing: 0.06em;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.inspector-name {
+.connector-port-badge {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.connector-alsa-badge {
+  font-size: 0.72rem;
+  font-family: monospace;
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.connector-bar-title {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 800;
   color: #f4f4f5;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-/* Inspector Details Table */
-.inspector-details-table {
+.connector-bar-stats {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.connector-stat-item {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 0.2rem;
 }
 
-.inspector-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+.connector-stat-item .stat-label {
+  font-size: 0.68rem;
+  color: #71717a;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.connector-stat-item .stat-val {
   font-size: 0.88rem;
-}
-
-.inspector-row .row-label {
-  color: #94a3b8;
-  font-weight: 500;
-}
-
-.inspector-row .row-val {
   color: #e4e4e7;
   font-weight: 600;
-  text-align: right;
-}
-
-.inspector-row .row-val.mono {
-  font-family: monospace;
-  color: #60a5fa;
 }
 
 .active-streams-tag {
@@ -333,32 +340,30 @@
   font-weight: 500;
 }
 
-/* Inspector Action Button */
-.inspector-actions {
-  display: flex;
-  flex-direction: column;
-}
-
-.inspector-action-btn {
+.connector-bar-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
+}
+
+.connector-action-btn {
+  display: inline-flex;
+  align-items: center;
   gap: 0.5rem;
   background: rgba(245, 158, 11, 0.18);
   border: 1px solid rgba(245, 158, 11, 0.45);
   color: #fbbf24;
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 1.15rem;
   border-radius: 8px;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.inspector-action-btn:hover {
+.connector-action-btn:hover {
   background: rgba(245, 158, 11, 0.3);
-  border-color: rgba(245, 158, 11, 0.7);
   color: #fff;
+  border-color: rgba(245, 158, 11, 0.7);
   transform: translateY(-1px);
 }
 
