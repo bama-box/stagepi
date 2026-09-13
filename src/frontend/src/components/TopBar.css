@@ -105,32 +105,80 @@
 
 .device-info {
   font-family: monospace;
-  font-size: 0.9rem;
-  color: #007ce9;
+  font-size: 0.85rem;
+  color: #60a5fa;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(96, 165, 250, 0.08);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(96, 165, 250, 0.15);
+}
+
+.logo-text-group {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.hamburger-menu {
-  display: none; /* Hidden on desktop */
-  background: none;
-  border: none;
-  color: #eee;
+.logo-badge {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.topbar-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e4e4e7;
   cursor: pointer;
-  padding: 0.5rem;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.topbar-action-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.topbar-action-btn.settings-btn {
+  color: #d1d5db;
+}
+
+.topbar-action-btn.settings-btn:hover {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.3);
 }
 
 @media (max-width: 768px) {
-  .hamburger-menu {
-    display: block; /* Visible on mobile */
+  .logo-container .logo-badge {
+    display: none;
   }
 
-  .logo-container {
-    font-size: 1rem;
-  }
-  .logo-container .logo-text {
+  .topbar-action-btn .btn-label {
     display: none;
+  }
+
+  .topbar-action-btn {
+    padding: 8px;
+  }
+
+  .device-info {
+    display: none; /* Hide device ID on narrow screens to make room for buttons */
   }
 
   .top-bar-right {

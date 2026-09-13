@@ -1,94 +1,97 @@
 import { useState, useEffect } from 'preact/hooks';
 import './app.css';
 import { TopBar } from './components/TopBar';
-import { SideBar } from './components/SideBar';
-import { MainContent } from './components/MainContent';
-import { BottomBar } from './components/BottomBar';
+import { ApplianceDashboard } from './components/dashboard/ApplianceDashboard';
+import { SettingsDrawer } from './components/settings/SettingsDrawer';
 import { NotificationProvider } from './context/NotificationContext';
 import { ToastContainer } from './components/notifications/ToastContainer';
 import { NotificationDrawer } from './components/notifications/NotificationDrawer';
-import type { AppView } from './types';
 import { API_BASE_URL } from './config';
 
-
-const VIEW_MAP: Record<string, AppView> = {
-  resources: 'Resources',
-  network: 'Network',
-  wifi: 'Wifi',
-  airplay: 'Airplay',
-  bluetooth: 'Bluetooth',
-  aes67: 'AES67',
-  led: 'LED',
+const SETTINGS_HASHES: Record<string, string> = {
+  ethernet: 'ethernet',
+  network: 'ethernet',
+  wifi: 'wifi',
+  aux: 'aux',
+  airplay: 'aux',
+  bluetooth: 'aux',
+  system: 'system',
+  resources: 'system',
+  led: 'system',
+  about: 'about',
+  settings: 'ethernet',
 };
 
-function getInitialView(): AppView {
-  const hash = window.location.hash.replace(/^#\/?/, '').toLowerCase();
-  if (hash && VIEW_MAP[hash]) {
-    return VIEW_MAP[hash];
-  }
-  const saved = localStorage.getItem('stagepi_active_view');
-  if (saved && Object.values(VIEW_MAP).includes(saved as AppView)) {
-    return saved as AppView;
-  }
-  return 'Resources';
-}
-
 export function App() {
-  const [activeView, setActiveViewState] = useState<AppView>(getInitialView);
   const [deviceId, setDeviceId] = useState<string>('Loading...');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<string>('ethernet');
 
-  const setActiveView = (view: AppView) => {
-    setActiveViewState(view);
-    localStorage.setItem('stagepi_active_view', view);
-    const targetHash = `#/${view.toLowerCase()}`;
-    if (window.location.hash !== targetHash) {
-      window.location.hash = targetHash;
+  const handleOpenSettings = (tab?: string) => {
+    const targetTab = tab || settingsTab || 'ethernet';
+    setSettingsTab(targetTab);
+    setIsSettingsOpen(true);
+    window.location.hash = `#/${targetTab}`;
+  };
+
+  const handleCloseSettings = () => {
+    setIsSettingsOpen(false);
+    if (window.location.hash && window.location.hash !== '#/dashboard') {
+      history.replaceState(null, '', ' ');
     }
   };
 
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.replace(/^#\/?/, '').toLowerCase();
-      if (hash && VIEW_MAP[hash]) {
-        setActiveViewState(VIEW_MAP[hash]);
-        localStorage.setItem('stagepi_active_view', VIEW_MAP[hash]);
+      const rawHash = window.location.hash.replace(/^#\/?/, '').toLowerCase();
+      if (rawHash && SETTINGS_HASHES[rawHash]) {
+        setSettingsTab(SETTINGS_HASHES[rawHash]);
+        setIsSettingsOpen(true);
+      } else if (rawHash === '' || rawHash === 'dashboard') {
+        setIsSettingsOpen(false);
       }
     };
 
-    if (!window.location.hash) {
-      window.location.hash = `#/${activeView.toLowerCase()}`;
+    // Check hash on initial load
+    const initialHash = window.location.hash.replace(/^#\/?/, '').toLowerCase();
+    if (initialHash && SETTINGS_HASHES[initialHash]) {
+      setSettingsTab(SETTINGS_HASHES[initialHash]);
+      setIsSettingsOpen(true);
     }
 
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [activeView]);
+  }, []);
 
-  // Fetch the deviceId once for the TopBar
+  // Fetch deviceId once for TopBar and Settings
   useEffect(() => {
     fetch(`${API_BASE_URL}/system/status`)
-      .then(res => res.json())
-      .then(data => setDeviceId(data.deviceId))
-      .catch(() => setDeviceId('Error'));
+      .then((res) => res.json())
+      .then((data) => setDeviceId(data.deviceId || 'StagePi'))
+      .catch(() => setDeviceId('StagePi'));
   }, []);
 
   return (
     <NotificationProvider>
       <div id="app-container">
-        {/* We will pass the state and functions down as props */}
-        <TopBar deviceId={deviceId} onMenuClick={() => setIsSidebarOpen(true)} />
-        <SideBar 
-          activeView={activeView} 
-          setActiveView={setActiveView}
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)} 
+        {/* Top Header */}
+        <TopBar
+          deviceId={deviceId}
+          onOpenSettings={() => handleOpenSettings()}
         />
-        
-        {/* This overlay will appear behind the sidebar to allow closing it */}
-        {isSidebarOpen && <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)}></div>}
 
-        <MainContent activeView={activeView} />
-        <BottomBar />
+        {/* Main Appliance Dashboard */}
+        <main id="main-content">
+          <ApplianceDashboard onOpenSettings={handleOpenSettings} />
+        </main>
+
+        {/* Settings Slide-Over Drawer */}
+        <SettingsDrawer
+          isOpen={isSettingsOpen}
+          onClose={handleCloseSettings}
+          initialTab={settingsTab}
+          deviceId={deviceId}
+        />
 
         {/* Global Notifications UI */}
         <ToastContainer />
@@ -97,4 +100,4 @@ export function App() {
     </NotificationProvider>
   );
 }
-
+export default App;

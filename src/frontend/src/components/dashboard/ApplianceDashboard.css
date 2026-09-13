@@ -1,0 +1,542 @@
+.appliance-dashboard {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+/* 1. Appliance Status Banner */
+.appliance-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(180deg, #1f1f24 0%, #161619 100%);
+  border: 1px solid #2e2e36;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.banner-hw-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hw-icon-pill {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 152, 0, 0.15);
+  color: #ff9800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+.hw-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.hw-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: #8e8e99;
+}
+
+.hw-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f3f4f6;
+}
+
+.banner-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+}
+
+.pill-active {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+.pill-active .pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulse-dot 2s infinite;
+}
+
+.pill-idle {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #a1a1aa;
+}
+
+.pill-idle .pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #71717a;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.2); }
+}
+
+.banner-refresh-btn {
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  color: #d4d4d8;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.banner-refresh-btn:hover:not(:disabled) {
+  background: #3f3f46;
+  color: #fff;
+}
+
+/* 2. Section Containers */
+.dashboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-bottom: 1px solid #27272a;
+  padding-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f4f4f5;
+  letter-spacing: -0.01em;
+}
+
+.section-subtitle {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: #8e8e99;
+}
+
+.action-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ff9800;
+  color: #121214;
+  border: none;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.25);
+}
+
+.action-btn-primary:hover {
+  background: #ffa726;
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
+}
+
+/* Empty State */
+.empty-streams-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3.5rem 1.5rem;
+  background: #18181b;
+  border: 2px dashed #2e2e36;
+  border-radius: 12px;
+  text-align: center;
+  color: #a1a1aa;
+}
+
+.empty-icon {
+  color: #ff9800;
+  opacity: 0.7;
+  margin-bottom: 12px;
+}
+
+.empty-streams-card h3 {
+  margin: 0 0 6px;
+  color: #f4f4f5;
+  font-size: 1.1rem;
+}
+
+.empty-streams-card p {
+  margin: 0 0 16px;
+  font-size: 0.85rem;
+  color: #71717a;
+}
+
+/* Stream Tiles Grid */
+.stream-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 16px;
+}
+
+.stream-tile {
+  background: #1a1a1e;
+  border: 1px solid #2d2d35;
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stream-tile.tile-running {
+  border-color: rgba(16, 185, 129, 0.45);
+  box-shadow: 0 4px 24px rgba(16, 185, 129, 0.15);
+}
+
+.stream-tile.tile-stopped {
+  border-color: #2e2e36;
+  opacity: 0.95;
+}
+
+/* Tile Header */
+.tile-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tile-id-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stream-status-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.stream-status-light.light-on {
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+  animation: pulse-dot 2s infinite;
+}
+
+.stream-status-light.light-off {
+  background: #52525b;
+}
+
+.tile-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tile-mode-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #93c5fd;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tile-stream-id {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f4f4f5;
+  letter-spacing: -0.01em;
+}
+
+.tile-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tile-icon-btn {
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.tile-icon-btn:hover {
+  background: #3f3f46;
+  color: #fff;
+}
+
+.tile-icon-btn.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #f87171;
+}
+
+/* Tile Parameter Grid */
+.tile-params-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 14px;
+  background: #131316;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #232328;
+}
+
+.param-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.param-label {
+  font-size: 0.68rem;
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.param-value {
+  font-size: 0.84rem;
+  color: #e4e4e7;
+  font-weight: 500;
+}
+
+.param-value.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Giant Tactile Button */
+.tile-footer {
+  margin-top: 2px;
+}
+
+.giant-toggle-btn {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 9px;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.giant-toggle-btn.btn-start {
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+}
+
+.giant-toggle-btn.btn-start:hover:not(:disabled) {
+  background: linear-gradient(180deg, #34d399 0%, #10b981 100%);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+  transform: translateY(-1px);
+}
+
+.giant-toggle-btn.btn-stop {
+  background: linear-gradient(180deg, #3f3f46 0%, #27272a 100%);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.giant-toggle-btn.btn-stop:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+.giant-toggle-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* 3. Auxiliary Services Grid */
+.aux-services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.aux-service-card {
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: border-color 0.15s ease;
+}
+
+.aux-service-card:hover {
+  border-color: #3f3f46;
+}
+
+.aux-card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.aux-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.aux-icon-wrapper.airplay {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.aux-icon-wrapper.bluetooth {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+}
+
+.aux-icon-wrapper.wifi {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.aux-name {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #f4f4f5;
+}
+
+.aux-status-text {
+  font-size: 0.73rem;
+  color: #71717a;
+}
+
+.aux-card-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aux-switch-btn {
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  color: #71717a;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.aux-switch-btn.active {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10b981;
+  color: #34d399;
+}
+
+.aux-config-btn,
+.aux-link-btn {
+  background: #27272a;
+  border: 1px solid #3f3f46;
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.aux-config-btn:hover,
+.aux-link-btn:hover {
+  background: #3f3f46;
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .appliance-dashboard {
+    padding: 1rem 0.75rem 2.5rem;
+    gap: 1.25rem;
+  }
+
+  .stream-tiles-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tile-params-grid {
+    grid-template-columns: 1fr;
+  }
+}
