@@ -3,6 +3,7 @@ import { ToggleSwitch } from '../ui/ToggleSwitch';
 import { InfoRow } from './Wifi';
 import './Bluetooth.css';
 import { API_BASE_URL } from '../../config';
+import { useNotification } from '../../context/NotificationContext';
 
 interface BluetoothData {
   name: string;
@@ -13,6 +14,7 @@ interface BluetoothData {
 }
 
 export function Bluetooth() {
+  const { notify } = useNotification();
   const [btData, setBtData] = useState<BluetoothData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false); // New state for tracking the PATCH request
@@ -27,7 +29,15 @@ export function Bluetooth() {
         return res.json();
       })
       .then(data => setBtData(data))
-      .catch(err => setError(err))
+      .catch(err => {
+        setError(err);
+        notify({
+          type: 'error',
+          title: 'Bluetooth Status Error',
+          message: err.message || 'Failed to load Bluetooth service',
+          source: 'Bluetooth',
+        });
+      })
       .finally(() => setLoading(false));
   };
 
@@ -35,15 +45,12 @@ export function Bluetooth() {
     fetchBluetoothStatus();
   }, []);
 
-  // --- THIS IS THE UPDATED FUNCTION ---
   const handleToggle = async (newEnabledState: boolean) => {
-    if (!btData || isSaving) return; // Prevent multiple clicks
+    if (!btData || isSaving) return;
 
-    setIsSaving(true);
-    const originalData = { ...btData }; // Keep a copy to revert on error
-
-    // Optimistically update the UI for a snappy feel
+    const originalData = { ...btData };
     setBtData({ ...btData, enabled: newEnabledState });
+    setIsSaving(true);
 
     try {
       const response = await fetch(`${API_BASE_URL}/services/bluetooth`, {
@@ -67,10 +74,21 @@ export function Bluetooth() {
       const updatedData = await response.json();
       setBtData(updatedData);
 
+      notify({
+        type: 'info',
+        title: 'Bluetooth Service',
+        message: `Bluetooth is now ${newEnabledState ? 'enabled' : 'disabled'}.`,
+        source: 'Bluetooth',
+      });
     } catch (err: any) {
       // If the request fails, revert the UI to its original state
       setBtData(originalData);
-      alert(`Error: ${err.message}`);
+      notify({
+        type: 'error',
+        title: 'Bluetooth Toggle Failed',
+        message: err.message,
+        source: 'Bluetooth',
+      });
     } finally {
       // Always stop the saving indicator
       setIsSaving(false);

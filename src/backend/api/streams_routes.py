@@ -140,3 +140,12 @@ async def get_startup_failures():
     """Get list of streams that failed to start during application startup."""
     failures = stream_manager.get_startup_failed_streams()
     return {"failed_count": len(failures), "failures": failures}
+
+
+@router.get("/{stream_id}/logs", include_in_schema=False)
+@router.get("/{stream_id}/logs/")
+async def get_stream_logs(stream_id: str, lines: int = 100, strip_ansi: bool = True):
+    """Get supervisor logs (stdout and stderr) for a stream."""
+    return stream_manager.get_stream_logs(stream_id, lines=lines, strip_ansi_logs=strip_ansi)
+
+

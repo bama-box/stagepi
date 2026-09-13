@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'preact/hooks';
 import { ToggleSwitch } from '../ui/ToggleSwitch';
-// Assuming InfoRow is exported from a shared location or Wifi.tsx
 import { InfoRow } from './Wifi';
 import './Airplay.css';
 import { API_BASE_URL } from '../../config';
+import { useNotification } from '../../context/NotificationContext';
 
 // --- TypeScript Interfaces ---
 interface AirplayConfig {
@@ -26,6 +26,7 @@ interface SoundHardware {
 }
 
 export function Airplay() {
+  const { notify } = useNotification();
   const [AirplayData, setAirplayData] = useState<AirplayData | null>(null);
   const [editConfig, setEditConfig] = useState<AirplayConfig | null>(null);
   const [soundDevices, setSoundDevices] = useState<SoundHardware[]>([]);
@@ -45,7 +46,15 @@ export function Airplay() {
         setAirplayData(data);
         setEditConfig(data.config);
       })
-      .catch(err => setError(err))
+      .catch(err => {
+        setError(err);
+        notify({
+          type: 'error',
+          title: 'AirPlay Status Error',
+          message: err.message || 'Failed to load AirPlay service',
+          source: 'AirPlay',
+        });
+      })
       .finally(() => setLoading(false));
   };
 
@@ -60,7 +69,6 @@ export function Airplay() {
 
   // --- Event Handlers ---
   const handleToggle = async (newEnabledState: boolean) => {
-    // This logic remains correct as it only sends the 'enabled' field
     if (!AirplayData || isSaving) return;
     
     setIsSaving(true);
@@ -77,9 +85,21 @@ export function Airplay() {
       const updatedData = await response.json();
       setAirplayData(updatedData);
       setEditConfig(updatedData.config);
+
+      notify({
+        type: 'info',
+        title: 'AirPlay Service',
+        message: `AirPlay is now ${newEnabledState ? 'enabled' : 'disabled'}.`,
+        source: 'AirPlay',
+      });
     } catch (err: any) {
       setAirplayData(originalData);
-      alert(`Error: ${err.message}`);
+      notify({
+        type: 'error',
+        title: 'AirPlay Toggle Failed',
+        message: err.message,
+        source: 'AirPlay',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -103,7 +123,6 @@ export function Airplay() {
 
     setIsSaving(true);
     try {
-      // Create a payload that includes the required 'enabled' field
       const payload = {
         ...editConfig,
         enabled: AirplayData.enabled,
@@ -115,7 +134,7 @@ export function Airplay() {
           'accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload), // Send the complete payload
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) throw new Error('Failed to save configuration.');
@@ -124,8 +143,20 @@ export function Airplay() {
       setAirplayData(updatedData);
       setEditConfig(updatedData.config);
 
+      notify({
+        type: 'success',
+        title: 'AirPlay Saved',
+        message: 'AirPlay configuration saved successfully.',
+        details: `Advertising Name: ${payload.adv_name}\nAudio Device: ${payload.hw_device}`,
+        source: 'AirPlay',
+      });
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      notify({
+        type: 'error',
+        title: 'Save AirPlay Failed',
+        message: err.message,
+        source: 'AirPlay',
+      });
       handleReset();
     } finally {
       setIsSaving(false);

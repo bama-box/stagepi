@@ -71,3 +71,13 @@ async def set_led_state(action: str, led: str = None):
     if result is None:
         raise HTTPException(status_code=404, detail=f"LED {led or 'all'} not available")
     return result
+
+
+@router.get("/logs")
+async def get_system_logs(service: str = "stagepi-ui", lines: int = 50, strip_ansi: bool = True):
+    """
+    Retrieves recent logs for system services.
+    """
+    return system_manager.get_system_logs(service=service, lines=lines, strip_ansi_logs=strip_ansi)
+
+

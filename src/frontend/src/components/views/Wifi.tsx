@@ -2,6 +2,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { FiRefreshCw } from 'react-icons/fi';
 import './Wifi.css';
 import { API_BASE_URL } from '../../config';
+import { useNotification } from '../../context/NotificationContext';
 
 // --- TypeScript Interfaces ---
 interface ClientConfig {
@@ -32,6 +33,7 @@ export function InfoRow({ label, value }: { label: string; value: string | undef
 }
 
 export function Wifi() {
+  const { notify } = useNotification();
   const [wifiData, setWifiData] = useState<WifiData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -53,7 +55,15 @@ export function Wifi() {
         // Set the initial selected mode based on the device's current mode
         setSelectedMode(data.deviceMode === 'ap' ? 'hotspot' : 'client');
       })
-      .catch(err => setError(err))
+      .catch(err => {
+        setError(err);
+        notify({
+          type: 'error',
+          title: 'Wi-Fi Load Error',
+          message: err.message || 'Failed to load Wi-Fi settings',
+          source: 'Wi-Fi',
+        });
+      })
       .finally(() => setLoading(false));
   };
 
@@ -72,7 +82,12 @@ export function Wifi() {
 
     if (selectedMode === 'client') {
       if (!editSsid) {
-        alert('SSID cannot be empty.');
+        notify({
+          type: 'warning',
+          title: 'Validation Error',
+          message: 'SSID cannot be empty for Wi-Fi client mode.',
+          source: 'Wi-Fi',
+        });
         setIsSaving(false);
         return;
       }
@@ -83,15 +98,29 @@ export function Wifi() {
     try {
       const response = await fetch(`${API_BASE_URL}/network/config/wifi`, requestOptions);
   
-      if (!response.ok) throw new Error(`Failed to set ${selectedMode} mode.`);
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || `Failed to set ${selectedMode} mode.`);
+      }
 
-      alert(`Successfully switched to ${selectedMode} mode. The device may restart or take a moment to apply changes.`);
+      notify({
+        type: 'success',
+        title: 'Wi-Fi Mode Changed',
+        message: `Successfully switched to ${selectedMode} mode. The device may take a moment to apply changes.`,
+        details: `Mode: ${selectedMode}\nSSID: ${editSsid || 'N/A'}\nRegion: ${editRegion || 'Default'}`,
+        source: 'Wi-Fi',
+      });
       setEditRegion('');
       setEditSsid('');
       setEditPassword('');
       fetchWifiConfig();
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      notify({
+        type: 'error',
+        title: 'Wi-Fi Change Failed',
+        message: err.message,
+        source: 'Wi-Fi',
+      });
     } finally {
       setIsSaving(false);
     }

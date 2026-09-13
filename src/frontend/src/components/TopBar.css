@@ -6,8 +6,15 @@
   padding: 0.75rem 1.5rem;
   background-color: #1e1e1e;
   border-bottom: 1px solid #444;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
+
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .logo-container {
   display: flex;
   align-items: center;
@@ -16,15 +23,90 @@
   font-weight: 600;
   color: #eee;
 }
+
 .logo-icon {
   color: #ff9800;
 }
+
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+/* Notification Bell Button */
+.notif-bell-btn {
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.notif-bell-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f4f4f5;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.notif-bell-btn.has-notifs {
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.notif-bell-btn.has-errors {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
+  animation: bell-pulse 2.5s infinite;
+}
+
+@keyframes bell-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+}
+
+.notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  line-height: 1;
+}
+
+.badge-error {
+  background-color: #ef4444;
+}
+
+.badge-info {
+  background-color: #f59e0b;
+}
+
 .device-info {
   font-family: monospace;
   font-size: 0.9rem;
   color: #007ce9;
-  
-  /* Add these lines for alignment */
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -45,10 +127,13 @@
   }
 
   .logo-container {
-    /* Hide the logo text on mobile to save space */
     font-size: 1rem;
   }
   .logo-container .logo-text {
     display: none;
+  }
+
+  .top-bar-right {
+    gap: 0.75rem;
   }
 }

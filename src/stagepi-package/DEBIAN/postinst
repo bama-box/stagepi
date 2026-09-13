@@ -37,6 +37,12 @@ install -d /etc/sysctl.d
 install -m 644 "$SOURCE_DIR/etc/sysctl.d/99-stagepi.conf" /etc/sysctl.d/
 sysctl -p /etc/sysctl.d/99-stagepi.conf 2>/dev/null || true
 
+# Copy sudoers configuration for StagePi
+if [ -f "$SOURCE_DIR/etc/sudoers.d/010_stagepi-nopasswd" ]; then
+    install -d /etc/sudoers.d
+    install -m 440 "$SOURCE_DIR/etc/sudoers.d/010_stagepi-nopasswd" /etc/sudoers.d/
+fi
+
 # Copy systemd service files
 install -d /etc/systemd/system
 install -m 644 "$SOURCE_DIR/etc/systemd/system/stagepi-ble.service" /etc/systemd/system/

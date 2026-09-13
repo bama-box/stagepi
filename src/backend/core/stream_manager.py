@@ -116,8 +116,10 @@ def _build_supervisor_env_string(config: dict[str, Any]) -> str:
 
     # Always include GST_DEBUG at the end
     env_pairs.append('GST_DEBUG="2"')
+    env_pairs.append('GST_DEBUG_NO_COLOR="1"')
 
     return ",".join(env_pairs)
+
 
 
 def _run_privileged_command(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
@@ -237,12 +239,12 @@ class AES67Stream:
     def _get_alsa_device_string(self, device_name: str) -> str:
         """
         Format ALSA device string.
-        If device is 'default', return as is.
-        If device has no prefix (no colon), prepend 'hw:'.
-        Otherwise return as is (assumes user provided 'hw:x,y' or 'plughw:x,y').
+        If device is 'default' or empty, return 'default'.
+        If device has prefix (contains colon), return as is (e.g. 'hw:0,0', 'plughw:1').
+        Otherwise return as 'hw:{device_name}'.
         """
-        if device_name == "default":
-            return device_name
+        if not device_name or device_name == "default":
+            return "default"
 
         if ":" in device_name:
             return device_name
@@ -425,13 +427,24 @@ environment={env_string}
                     f"Stderr: {result.stderr.strip()}. Stdout: {result.stdout.strip()}"
                 )
 
-            # Verify it's running
+            # Verify it's running (poll for up to 2.5s to allow supervisor startsecs=2 to elapse)
             import time
 
-            time.sleep(0.5)  # Give it a moment to start
+            start_time = time.time()
+            status = None
+            while time.time() - start_time < 2.5:
+                status = self._get_supervisor_status()
+                if status:
+                    if status["state"] == "RUNNING":
+                        break
+                    if status["state"] in ("FATAL", "BACKOFF", "EXITED"):
+                        error_msg = self._get_process_error()
+                        if error_msg:
+                            raise RuntimeError(error_msg)
+                        raise RuntimeError(f"Stream failed to start: {status.get('statename', 'unknown state')}")
+                time.sleep(0.3)
 
-            status = self._get_supervisor_status()
-            if status and status["state"] != "RUNNING":
+            if status and status["state"] not in ("RUNNING", "STARTING"):
                 error_msg = self._get_process_error()
                 if error_msg:
                     raise RuntimeError(error_msg)
@@ -700,13 +713,21 @@ def _dict_to_stream_config(stream_data: dict[str, Any]) -> Optional[StreamConfig
         StreamConfig instance or None if required fields are missing
     """
     try:
+        device_val = stream_data.get("device")
+        if not device_val:
+            device_val = "default"
+
+        iface_val = stream_data.get("iface")
+        if not iface_val:
+            iface_val = "eth0"
+
         return StreamConfig(
             stream_id=str(stream_data.get("id", "")),
             kind=stream_data.get("kind", "receiver"),
             ip=stream_data.get("ip", "239.69.0.1"),
             port=int(stream_data.get("port", 5004)),
-            device=stream_data.get("device", "default"),
-            iface=stream_data.get("iface", "eth0"),
+            device=device_val,
+            iface=iface_val,
             channels=int(stream_data.get("channels", 2)),
             loopback=bool(stream_data.get("loopback", False)),
             buffer_time=int(stream_data.get("buffer_time", 100000)),
@@ -991,6 +1012,7 @@ def delete_stream(stream_id: str, provider: str = "aes67") -> list[dict[str, Any
     if os.path.exists(conf_path):
         _run_privileged_command(["rm", conf_path])
         logger.info(f"Deleted supervisor config: {conf_path}")
+        _run_privileged_command(["supervisorctl", "update"], check=False)
 
     return get_all_streams(provider)
 
@@ -1045,3 +1067,67 @@ def initialize_streams(provider: str = "aes67"):
 
     _sync_all_streams_to_gstreamer(provider, save_failures=True)
     logger.info("Stream initialization complete.")
+
+
+ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+
+
+def strip_ansi(text: str) -> str:
+    """Strip ANSI escape sequences from text."""
+    if not text:
+        return ""
+    return ANSI_ESCAPE_RE.sub("", text)
+
+
+def get_stream_logs(stream_id: str, lines: int = 100, strip_ansi_logs: bool = True) -> dict[str, Any]:
+    """
+    Retrieve stdout and stderr logs for a specific stream.
+
+    Args:
+        stream_id: Stream ID to retrieve logs for
+        lines: Max lines to return from the end of each log file (default: 100)
+        strip_ansi_logs: Whether to strip ANSI color escape codes (default: True)
+
+    Returns:
+        dict containing stream_id, status, stdout, and stderr
+    """
+    clean_id = re.sub(r"[^a-zA-Z0-9_\-]", "", stream_id)
+    stdout_file = f"/var/log/supervisor/stream-{clean_id}.log"
+    stderr_file = f"/var/log/supervisor/stream-{clean_id}-error.log"
+
+    def read_tail(filepath: str) -> str:
+        if not os.path.exists(filepath):
+            return ""
+        try:
+            with open(filepath, "r", errors="replace") as f:
+                all_lines = f.readlines()
+                return "".join(all_lines[-lines:])
+        except PermissionError:
+            try:
+                proc = _run_privileged_command(["tail", "-n", str(lines), filepath], check=False)
+                return proc.stdout or ""
+            except Exception as e:
+                return f"Error reading log with privileges: {e}"
+        except Exception as e:
+            return f"Error reading log: {e}"
+
+    stdout_content = read_tail(stdout_file)
+    stderr_content = read_tail(stderr_file)
+
+    supervisor_status = ""
+    try:
+        proc = _run_privileged_command(["supervisorctl", "status", f"stagepi-stream-{clean_id}"], check=False)
+        supervisor_status = proc.stdout.strip()
+    except Exception:
+        pass
+
+    return {
+        "stream_id": stream_id,
+        "status": strip_ansi(supervisor_status),
+        "stdout": strip_ansi(stdout_content) if strip_ansi_logs else stdout_content,
+        "stderr": strip_ansi(stderr_content) if strip_ansi_logs else stderr_content,
+        "raw_stdout": stdout_content,
+        "raw_stderr": stderr_content,
+    }
+
+

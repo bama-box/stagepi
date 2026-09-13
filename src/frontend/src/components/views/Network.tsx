@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'preact/hooks';
 import './Network.css';
 import { API_BASE_URL } from '../../config';
+import { useNotification } from '../../context/NotificationContext';
 
 // --- TypeScript Interfaces ---
 // For the data we receive (GET)
@@ -20,6 +21,7 @@ interface NetworkEditData {
 }
 
 export function Network() {
+  const { notify } = useNotification();
   const [networkData, setNetworkData] = useState<NetworkData | null>(null);
   const [selectedMode, setSelectedMode] = useState<'auto' | 'manual'>('manual');
   const [editData, setEditData] = useState<NetworkEditData | null>(null);
@@ -109,10 +111,20 @@ export function Network() {
           const errData = await response.json().catch(() => ({}));
           throw new Error(errData.detail || `HTTP Error: ${response.status}`);
         }
-        alert('Switched to DHCP mode. If the IP address changes, you may need to reconnect using the new IP address or stagepi.local.');
+        notify({
+          type: 'info',
+          title: 'Switched to DHCP Mode',
+          message: 'If the IP address changes, you may need to reconnect using the new IP address or stagepi.local.',
+          source: 'Ethernet',
+        });
         await fetchNetworkConfig();
       } catch (err: any) {
-        alert(`Error: ${err.message}`);
+        notify({
+          type: 'error',
+          title: 'Failed to Switch to DHCP',
+          message: err.message,
+          source: 'Ethernet',
+        });
         handleReset();
       } finally {
         setIsSaving(false);
@@ -123,11 +135,21 @@ export function Network() {
     // Static mode
     if (!editData) return;
     if (!editData.ipAddress.trim()) {
-      alert('IP Address cannot be empty for static configuration.');
+      notify({
+        type: 'warning',
+        title: 'Validation Error',
+        message: 'IP Address cannot be empty for static configuration.',
+        source: 'Ethernet',
+      });
       return;
     }
     if (!editData.subnetMask.trim()) {
-      alert('Subnet Mask cannot be empty.');
+      notify({
+        type: 'warning',
+        title: 'Validation Error',
+        message: 'Subnet Mask cannot be empty.',
+        source: 'Ethernet',
+      });
       return;
     }
 
@@ -163,9 +185,21 @@ export function Network() {
         gateway: updatedData.gateway || '',
       });
       setDnsInput((updatedData.dnsServers || []).join(', '));
-      alert('Ethernet configuration saved successfully.\n\nNote: If you changed the IP address, you will need to access the WebUI at the new IP.');
+      notify({
+        type: 'success',
+        title: 'Ethernet Saved',
+        message: 'Ethernet configuration saved successfully. If you changed the IP address, access the WebUI at the new IP.',
+        details: `IP: ${payload.ipAddress}\nMask: ${payload.subnetMask}\nGateway: ${payload.gateway || 'None'}\nDNS: ${payload.dnsServers.join(', ') || 'None'}`,
+        source: 'Ethernet',
+      });
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      notify({
+        type: 'error',
+        title: 'Save Ethernet Failed',
+        message: err.message,
+        details: `Attempted configuration:\n${JSON.stringify(payload, null, 2)}`,
+        source: 'Ethernet',
+      });
       handleReset();
     } finally {
       setIsSaving(false);

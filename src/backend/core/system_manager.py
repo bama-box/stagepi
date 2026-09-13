@@ -223,3 +223,40 @@ def get_resources():
         },
         "uptime": int(time.time() - psutil.boot_time()),
     }
+
+
+ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+
+
+def strip_ansi(text: str) -> str:
+    """Strip ANSI escape sequences from text."""
+    if not text:
+        return ""
+    return ANSI_ESCAPE_RE.sub("", text)
+
+
+def get_system_logs(service: str = "stagepi-ui", lines: int = 50, strip_ansi_logs: bool = True) -> dict:
+    """
+    Get recent journal logs for a system service.
+    """
+    safe_service = re.sub(r"[^a-zA-Z0-9_\-\.]", "", service)
+    try:
+        cmd = ["journalctl", "-u", safe_service, "-n", str(lines), "--no-pager"]
+        if os.geteuid() != 0:
+            cmd = ["sudo"] + cmd
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+        raw_output = res.stdout or res.stderr or "No logs available"
+        return {
+            "service": safe_service,
+            "lines": lines,
+            "logs": strip_ansi(raw_output) if strip_ansi_logs else raw_output,
+            "raw_logs": raw_output,
+        }
+    except Exception as e:
+        return {
+            "service": safe_service,
+            "lines": lines,
+            "logs": f"Error fetching logs: {str(e)}",
+        }
+
+

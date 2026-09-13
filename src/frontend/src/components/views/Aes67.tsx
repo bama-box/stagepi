@@ -1,21 +1,14 @@
 import { useState, useEffect } from 'preact/hooks';
-import { FiPlay, FiSquare, FiTrash2, FiEdit2, FiX, FiCheck } from 'react-icons/fi';
+import { FiPlay, FiSquare, FiTrash2, FiSettings, FiPlus, FiRefreshCw } from 'react-icons/fi';
 import { GiSoundWaves } from 'react-icons/gi';
 import { BsEthernet } from 'react-icons/bs';
+import { HiOutlineMicrophone } from 'react-icons/hi2';
+import { RiSpeaker3Line } from 'react-icons/ri';
 import './Aes67.css';
+import { StreamModal, type Stream } from './StreamModal';
+import { useNotification } from '../../context/NotificationContext';
 import { API_BASE_URL } from '../../config';
 
-interface Stream {
-  id: string;
-  mode: 'input' | 'output';
-  addr: string;
-  port: number | string;
-  hw_device?: string;
-  net_device?: string;
-  enabled?: boolean;
-}
-
-// Helper functions to convert between frontend and backend field names
 function streamToBackend(stream: Partial<Stream>): any {
   const backend: any = {};
   if (stream.id !== undefined) backend.id = stream.id;
@@ -24,6 +17,8 @@ function streamToBackend(stream: Partial<Stream>): any {
   if (stream.port !== undefined) backend.port = stream.port;
   if (stream.hw_device !== undefined) backend.device = stream.hw_device;
   if (stream.net_device !== undefined) backend.iface = stream.net_device;
+  if (stream.channels !== undefined) backend.channels = stream.channels;
+  if (stream.format !== undefined) backend.format = stream.format;
   if (stream.enabled !== undefined) backend.enabled = stream.enabled;
   return backend;
 }
@@ -34,387 +29,448 @@ function streamFromBackend(backend: any): Stream {
     mode: backend.kind === 'sender' ? 'input' : 'output',
     addr: backend.ip || '239.69.22.10',
     port: backend.port ?? 5004,
-    hw_device: backend.device || '',
-    net_device: backend.iface || '',
-    enabled: typeof backend.enabled === 'boolean' ? backend.enabled : true,
+    hw_device: backend.device || 'default',
+    net_device: backend.iface || 'eth0',
+    channels: backend.channels ?? 2,
+    format: backend.format || 'S24BE',
+    enabled: typeof backend.enabled === 'boolean' ? backend.enabled : false,
   };
 }
 
 export function Aes67() {
+  const { notify } = useNotification();
   const [streams, setStreams] = useState<Stream[] | null>(null);
-  const [editStreams, setEditStreams] = useState<Stream[] | null>(null);
-  const [editingIds, setEditingIds] = useState<string[]>([]);
   const [netDevices, setNetDevices] = useState<string[]>([]);
   const [soundInputs, setSoundInputs] = useState<any[]>([]);
   const [soundOutputs, setSoundOutputs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [editingStream, setEditingStream] = useState<Stream | null>(null);
+  const [togglingStreamId, setTogglingStreamId] = useState<string | null>(null);
+
+  const fetchStreamsData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [sRes, nRes, siRes, soRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/streams`),
+        fetch(`${API_BASE_URL}/network/interfaces`),
+        fetch(`${API_BASE_URL}/sound/input`),
+        fetch(`${API_BASE_URL}/sound/output`),
+      ]);
+      if (!sRes.ok) throw new Error('Failed to fetch streams');
+      if (!nRes.ok) throw new Error('Failed to fetch network interfaces');
+
+      const sJson = await sRes.json();
+      const nJson = await nRes.json();
+      let siJson: any = [];
+      let soJson: any = [];
+      try { siJson = await siRes.json(); } catch { siJson = []; }
+      try { soJson = await soRes.json(); } catch { soJson = []; }
+
+      const parseDevices = (j: any) => {
+        if (!j) return [];
+        if (Array.isArray(j)) return j;
+        if (Array.isArray(j.inputs)) return j.inputs;
+        if (Array.isArray(j.outputs)) return j.outputs;
+        if (Array.isArray(j.devices)) return j.devices;
+        return [];
+      };
+
+      setStreams((sJson.streams || []).map(streamFromBackend));
+      setNetDevices(Array.isArray(nJson) ? nJson : (nJson.interfaces || ['eth0']));
+      setSoundInputs(parseDevices(siJson));
+      setSoundOutputs(parseDevices(soJson));
+    } catch (err: any) {
+      setError(err);
+      notify({
+        type: 'error',
+        title: 'AES67 Load Error',
+        message: err.message || 'Failed to load streams configuration',
+        source: 'AES67',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const [sRes, nRes, siRes, soRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/streams`),
-          fetch(`${API_BASE_URL}/network/interfaces`),
-          fetch(`${API_BASE_URL}/sound/input`),
-          fetch(`${API_BASE_URL}/sound/output`),
-        ]);
-        if (!sRes.ok) throw new Error('Failed to fetch streams');
-        if (!nRes.ok) throw new Error('Failed to fetch network interfaces');
-        const sJson = await sRes.json();
-        const nJson = await nRes.json();
-        let siJson: any = [];
-        let soJson: any = [];
-        try { siJson = await siRes.json(); } catch { siJson = []; }
-        try { soJson = await soRes.json(); } catch { soJson = []; }
-        const parseDevices = (j: any) => {
-          if (!j) return [];
-          if (Array.isArray(j)) return j;
-          if (Array.isArray(j.inputs)) return j.inputs;
-          if (Array.isArray(j.outputs)) return j.outputs;
-          if (Array.isArray(j.devices)) return j.devices;
-          return [];
-        };
-        const inDevices = parseDevices(siJson);
-        const outDevices = parseDevices(soJson);
-
-        const fetched: Stream[] = (sJson.streams || []).map((st: any) => {
-          const stream = streamFromBackend(st);
-          // Set default network device if not specified
-          if (!stream.net_device) {
-            stream.net_device = (nJson.interfaces && nJson.interfaces[0]) || '';
-          }
-          return stream;
-        });
-        setStreams(fetched);
-        setEditStreams(JSON.parse(JSON.stringify(fetched)));
-        setNetDevices(nJson.interfaces || []);
-        setSoundInputs(inDevices || []);
-        setSoundOutputs(outDevices || []);
-      } catch (err: any) {
-        setError(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
+    fetchStreamsData();
   }, []);
 
-  const handleReset = () => { setEditStreams(streams ? JSON.parse(JSON.stringify(streams)) : null); };
+  // Save Stream (Create or Edit)
+  const handleSaveStream = async (streamData: Partial<Stream>) => {
+    const backendData = streamToBackend(streamData);
+    const isEdit = editingStream !== null;
 
-  const toggleEdit = (id: string) => setEditingIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  const isEditing = (id: string) => editingIds.includes(id);
-
-  const updateStreamField = (idx: number, patch: Partial<Stream>) => {
-    if (!editStreams) return;
-    const updated = [...editStreams];
-    updated[idx] = { ...updated[idx], ...patch };
-    setEditStreams(updated);
-  };
-
-  const patchStreamObj = async (streamObj: Stream) => {
     try {
-      const id = streamObj.id;
-      const backendStream = streamToBackend(streamObj);
-      const res = await fetch(`${API_BASE_URL}/streams/${encodeURIComponent(id)}`, {
-        method: 'PATCH',
-        headers: { accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify(backendStream),
-      });
-      if (!res.ok) throw new Error(`Failed to patch stream ${id}`);
+      let res: Response;
+      if (isEdit) {
+        res = await fetch(`${API_BASE_URL}/streams/${encodeURIComponent(streamData.id!)}/`, {
+          method: 'PATCH',
+          headers: { accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify(backendData),
+        });
+      } else {
+        res = await fetch(`${API_BASE_URL}/streams/`, {
+          method: 'POST',
+          headers: { accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify(backendData),
+        });
+      }
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `Failed to ${isEdit ? 'update' : 'create'} stream (HTTP ${res.status})`);
+      }
+
       const j = await res.json();
-      const newStreams = (j.streams || []).map(streamFromBackend);
-      setStreams(newStreams);
-      setEditStreams(JSON.parse(JSON.stringify(newStreams)));
+      const updatedStreams: Stream[] = (j.streams || []).map(streamFromBackend);
+      setStreams(updatedStreams);
+
+      notify({
+        type: 'success',
+        title: isEdit ? 'Stream Updated' : 'Stream Created',
+        message: `Stream '${streamData.id}' configured successfully.`,
+        source: 'AES67',
+        streamId: streamData.id,
+      });
     } catch (err: any) {
-      console.error('patch error', err);
-      alert(`Error saving stream: ${err.message}`);
+      notify({
+        type: 'error',
+        title: isEdit ? 'Update Stream Failed' : 'Create Stream Failed',
+        message: err.message,
+        details: `Stream ID: ${streamData.id}\nMode: ${streamData.mode}\nDevice: ${streamData.hw_device}\nMulticast: ${streamData.addr}:${streamData.port}`,
+        source: 'AES67',
+        streamId: streamData.id,
+      });
+      throw err;
     }
   };
 
+  // Toggle Play / Stop
+  const handleToggleStream = async (stream: Stream) => {
+    if (togglingStreamId) return;
+    setTogglingStreamId(stream.id);
 
+    const targetEnabled = !stream.enabled;
+    // Optimistic UI update
+    setStreams(prev => prev ? prev.map(s => s.id === stream.id ? { ...s, enabled: targetEnabled } : s) : prev);
 
+    try {
+      const res = await fetch(`${API_BASE_URL}/streams/${encodeURIComponent(stream.id)}`, {
+        method: 'PATCH',
+        headers: { accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: targetEnabled }),
+      });
 
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `Failed to ${targetEnabled ? 'start' : 'stop'} stream`);
+      }
 
-  if (loading) return <div className="card">Loading AES67 status...</div>;
+      const j = await res.json();
+      const newStreams: Stream[] = (j.streams || []).map(streamFromBackend);
+      setStreams(newStreams);
+
+      notify({
+        type: 'info',
+        title: targetEnabled ? 'Stream Started' : 'Stream Stopped',
+        message: `Stream '${stream.id}' is now ${targetEnabled ? 'running' : 'stopped'}.`,
+        source: 'AES67',
+        streamId: stream.id,
+      });
+    } catch (err: any) {
+      notify({
+        type: 'error',
+        title: `Failed to ${targetEnabled ? 'Start' : 'Stop'} Stream`,
+        message: err.message,
+        details: `Stream ID: ${stream.id}\nMode: ${stream.mode === 'input' ? 'Transmitter' : 'Receiver'}\nMulticast: ${stream.addr}:${stream.port}\nALSA Device: ${stream.hw_device}\nInterface: ${stream.net_device}`,
+        source: 'AES67',
+        streamId: stream.id,
+      });
+      // Revert optimistic update
+      setStreams(prev => prev ? prev.map(s => s.id === stream.id ? { ...s, enabled: !targetEnabled } : s) : prev);
+    } finally {
+      setTogglingStreamId(null);
+    }
+  };
+
+  // Delete Stream
+  const handleDeleteStream = async (stream: Stream) => {
+    if (!window.confirm(`Are you sure you want to delete stream '${stream.id}'?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/streams/${encodeURIComponent(stream.id)}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete stream');
+      const j = await res.json();
+      const converted = (j.streams || []).map(streamFromBackend);
+      setStreams(converted);
+
+      notify({
+        type: 'info',
+        title: 'Stream Deleted',
+        message: `Stream '${stream.id}' was deleted successfully.`,
+        source: 'AES67',
+      });
+    } catch (err: any) {
+      notify({
+        type: 'error',
+        title: 'Delete Stream Failed',
+        message: err.message,
+        details: `Stream ID: ${stream.id}`,
+        source: 'AES67',
+        streamId: stream.id,
+      });
+    }
+  };
+
+  if (loading) return <div className="card">Loading AES67 streams...</div>;
   if (error) return <div className="card error">Error: {error.message}</div>;
-  if (!editStreams) return <div className="card">No data available.</div>;
+
+  const currentStreams = streams || [];
+  const transmitters = currentStreams.filter(s => s.mode === 'input');
+  const receivers = currentStreams.filter(s => s.mode === 'output');
+  const activeCount = currentStreams.filter(s => s.enabled).length;
 
   return (
-    <div className="aes67-layout">
-      <div className="card">
-        <h3>Streams</h3>
-        <div className="config-form">
-          <div className="streams-card">
-            {Array.isArray(editStreams) && editStreams.length > 0 ? (
-              (() => {
-                const entries = editStreams.map((s, i) => ({ s, i }));
-                const transmitters = entries.filter(e => e.s.mode === 'input');
-                const receivers = entries.filter(e => e.s.mode === 'output');
-                return (
-                  <>
-                    <section className="streams-section">
-                      <h4>Transmitters (Capture)</h4>
-                      {transmitters.length > 0 ? transmitters.map(({ s, i }) => (
-                        <div key={`tx-${s.id || i}`} className={`stream-card ${s.enabled ? 'active' : ''}`}>
-                          <div className="card-body">
-                            <div className="stream-line">
-                              <div className="stream-left">
-                                <button className={`stream-toggle ${s.enabled ? 'enabled' : 'disabled'}`} onClick={() => {
-                                  const updatedObj = { ...s, enabled: !s.enabled } as Stream;
-                                  updateStreamField(i, { enabled: !s.enabled });
-                                  void patchStreamObj(updatedObj);
-                                }} aria-pressed={!!s.enabled} title={s.enabled ? 'Stop stream' : 'Start stream'}>
-                                  {s.enabled ? <FiSquare size={20} /> : <FiPlay size={20} />}
-                                </button>
-                                {s.enabled && (
-                                  <div className="streaming-indicator" aria-hidden>
-                                    <span className="bar b1" />
-                                    <span className="bar b2" />
-                                    <span className="bar b3" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="stream-center">
-                                <div className="stream-id">{s.id}</div>
-                                <div className={`stream-direction ${s.mode === 'input' ? 'input' : 'output'}`}>{s.mode === 'input' ? 'Capture' : 'Receive'}</div>
-                                {!isEditing(s.id) ? (
-                                  <>
-                                    <div className="addr-left">
-                                      <BsEthernet className="icon-net" />
-                                      <span className="addr-net">{s.net_device || <em>(none)</em>}</span>
-                                    </div>
-                                    <div className="stream-addr">{`${s.addr}:${s.port}`}</div>
-                                    <div className="stream-meta">
-                                      <span className="stream-meta-item hw-with-icon"><GiSoundWaves className="icon-hw-meta" />{s.hw_device || <em>(none)</em>}</span>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <div className="editor-inline">
-                                    <select value={s.mode || 'output'} onChange={(e) => {
-                                      const val = (e.target as HTMLSelectElement).value as 'input' | 'output';
-                                      updateStreamField(i, { mode: val });
-                                    }} autoFocus onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
-                                      <option value="input">Input (Capture)</option>
-                                      <option value="output">Output (Receive)</option>
-                                    </select>
-                                    <select value={s.net_device || ''} onChange={(e) => {
-                                      const val = (e.target as HTMLSelectElement).value;
-                                      updateStreamField(i, { net_device: val });
-                                    }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
-                                      <option value="">(none)</option>
-                                      {netDevices.map(d => <option key={d} value={d}>{d}</option>)}
-                                    </select>
-                                    <input className="inline-input" type="text" value={`${s.addr}:${s.port}`} onInput={(e) => {
-                                      const [a, p] = (e.target as HTMLInputElement).value.split(':');
-                                      updateStreamField(i, { addr: a || '', port: p ? Number(p) : '' });
-                                    }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }} />
-                                    <select value={s.hw_device || ''} onChange={(e) => {
-                                      const val = (e.target as HTMLSelectElement).value;
-                                      updateStreamField(i, { hw_device: val });
-                                    }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
-                                      <option value="">(none)</option>
-                                      {(s.mode === 'input' ? soundInputs : soundOutputs).map((d: any) => (
-                                        <option key={d.card_id || d.card_name} value={d.card_name || d.card_id}>{d.card_name || d.card_id}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                )}
-                              </div>
-                              <div className="stream-right">
-                                {!isEditing(s.id) ? (
-                                  <button className="icon-button edit" onClick={() => toggleEdit(s.id)} title="Edit">
-                                    <FiEdit2 />
-                                  </button>
-                                ) : (
-                                  <>
-                                    <button className="icon-button approve" onClick={() => {
-                                      void patchStreamObj(editStreams![i]);
-                                      toggleEdit(s.id);
-                                    }} title="Apply changes">
-                                      <FiCheck />
-                                    </button>
-                                    <button className="icon-button cancel" onClick={() => {
-                                      handleReset();
-                                      toggleEdit(s.id);
-                                    }} title="Cancel">
-                                      <FiX />
-                                    </button>
-                                  </>
-                                )}
-                                <button className="delete-button" onClick={async () => {
-                                  const updated = [...(editStreams || [])];
-                                  updated.splice(i, 1);
-                                  setEditStreams(updated);
-                                  try {
-                                    const id = s.id;
-                                    const res = await fetch(`${API_BASE_URL}/streams/${encodeURIComponent(id)}`, { method: 'DELETE' });
-                                    if (!res.ok) throw new Error('Failed to delete');
-                                    const j = await res.json();
-                                    const convertedStreams = (j.streams || []).map(streamFromBackend);
-                                    setStreams(convertedStreams);
-                                    setEditStreams(JSON.parse(JSON.stringify(convertedStreams)));
-                                  } catch (err: any) { alert(`Delete error: ${err.message}`); }
-                                }} title="Delete"><FiTrash2 size={16} /></button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )) : <div className="muted">No transmitters configured.</div>}
-                    </section>
-
-                    <section className="streams-section">
-                      <h4>Receivers (Play/Receive)</h4>
-                      {receivers.length > 0 ? receivers.map(({ s, i }) => (
-                        <div key={`rx-${s.id || i}`} className={`stream-card ${s.enabled ? 'active' : ''}`}>
-                          <div className="card-body">
-                            <div className="stream-line">
-                              <div className="stream-left">
-                                <button className={`stream-toggle ${s.enabled ? 'enabled' : 'disabled'}`} onClick={() => {
-                                  const updatedObj = { ...s, enabled: !s.enabled } as Stream;
-                                  updateStreamField(i, { enabled: !s.enabled });
-                                  void patchStreamObj(updatedObj);
-                                }} aria-pressed={!!s.enabled} title={s.enabled ? 'Stop stream' : 'Start stream'}>
-                                  {s.enabled ? <FiSquare size={20} /> : <FiPlay size={20} />}
-                                </button>
-                                {s.enabled && (
-                                  <div className="streaming-indicator" aria-hidden>
-                                    <span className="bar b1" />
-                                    <span className="bar b2" />
-                                    <span className="bar b3" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="stream-center">
-                                <div className="stream-id">{s.id}</div>
-                                <div className={`stream-direction ${s.mode === 'input' ? 'input' : 'output'}`}>{s.mode === 'input' ? 'Capture' : 'Receive'}</div>
-                                {!isEditing(s.id) ? (
-                                  <>
-                                    <div className="addr-left">
-                                      <BsEthernet className="icon-net" />
-                                      <span className="addr-net">{s.net_device || <em>(none)</em>}</span>
-                                    </div>
-                                    <div className="stream-addr">{`${s.addr}:${s.port}`}</div>
-                                    <div className="stream-meta">
-                                      <span className="stream-meta-item hw-with-icon"><GiSoundWaves className="icon-hw-meta" />{s.hw_device || <em>(none)</em>}</span>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <div className="editor-inline">
-                                    <select value={s.mode || 'output'} onChange={(e) => {
-                                      const val = (e.target as HTMLSelectElement).value as 'input' | 'output';
-                                      updateStreamField(i, { mode: val });
-                                    }} autoFocus onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
-                                      <option value="input">Input (Capture)</option>
-                                      <option value="output">Output (Receive)</option>
-                                    </select>
-                                    <select value={s.net_device || ''} onChange={(e) => {
-                                      const val = (e.target as HTMLSelectElement).value;
-                                      updateStreamField(i, { net_device: val });
-                                    }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
-                                      <option value="">(none)</option>
-                                      {netDevices.map(d => <option key={d} value={d}>{d}</option>)}
-                                    </select>
-                                    <input className="inline-input" type="text" value={`${s.addr}:${s.port}`} onInput={(e) => {
-                                      const [a, p] = (e.target as HTMLInputElement).value.split(':');
-                                      updateStreamField(i, { addr: a || '', port: p ? Number(p) : '' });
-                                    }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }} />
-                                    <select value={s.hw_device || ''} onChange={(e) => {
-                                      const val = (e.target as HTMLSelectElement).value;
-                                      updateStreamField(i, { hw_device: val });
-                                    }} onKeyDown={(e) => { if (e.key === 'Escape') { handleReset(); toggleEdit(s.id); } if (e.key === 'Enter') { void patchStreamObj(editStreams![i]); toggleEdit(s.id); } }}>
-                                      <option value="">(none)</option>
-                                      {(s.mode === 'input' ? soundInputs : soundOutputs).map((d: any) => (
-                                        <option key={d.card_id || d.card_name} value={d.card_name || d.card_id}>{d.card_name || d.card_id}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                )}
-                              </div>
-                              <div className="stream-right">
-                                {!isEditing(s.id) ? (
-                                  <button className="icon-button edit" onClick={() => toggleEdit(s.id)} title="Edit">
-                                    <FiEdit2 />
-                                  </button>
-                                ) : (
-                                  <>
-                                    <button className="icon-button approve" onClick={() => {
-                                      void patchStreamObj(editStreams![i]);
-                                      toggleEdit(s.id);
-                                    }} title="Apply changes">
-                                      <FiCheck />
-                                    </button>
-                                    <button className="icon-button cancel" onClick={() => {
-                                      handleReset();
-                                      toggleEdit(s.id);
-                                    }} title="Cancel">
-                                      <FiX />
-                                    </button>
-                                  </>
-                                )}
-                                <button className="delete-button" onClick={async () => {
-                                  const updated = [...(editStreams || [])];
-                                  updated.splice(i, 1);
-                                  setEditStreams(updated);
-                                  try {
-                                    const id = s.id;
-                                    const res = await fetch(`${API_BASE_URL}/streams/${encodeURIComponent(id)}`, { method: 'DELETE' });
-                                    if (!res.ok) throw new Error('Failed to delete');
-                                    const j = await res.json();
-                                    const convertedStreams = (j.streams || []).map(streamFromBackend);
-                                    setStreams(convertedStreams);
-                                    setEditStreams(JSON.parse(JSON.stringify(convertedStreams)));
-                                  } catch (err: any) { alert(`Delete error: ${err.message}`); }
-                                }} title="Delete"><FiTrash2 size={16} /></button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )) : <div className="muted">No receivers configured.</div>}
-                    </section>
-                  </>
-                );
-              })()
-            ) : (
-              <div>No streams configured.</div>
-            )}
-
-            <div className="stream-actions">
-              <button className="button-secondary" onClick={async () => {
-                // Create new stream on the server with disabled state so user can configure it first
-                const newStream: Partial<Stream> = {
-                  mode: 'output',
-                  addr: '239.69.22.10',
-                  port: 5004,
-                  hw_device: '',
-                  net_device: (netDevices[0] || ''),
-                  enabled: false
-                };
-                const backendPayload = streamToBackend(newStream);
-                try {
-                  const res = await fetch(`${API_BASE_URL}/streams/`, {
-                    method: 'POST',
-                    headers: { accept: 'application/json', 'Content-Type': 'application/json' },
-                    body: JSON.stringify(backendPayload),
-                  });
-                  if (!res.ok) throw new Error('Failed to create stream');
-                  const j = await res.json();
-                  const updatedStreams: Stream[] = (j.streams || []).map(streamFromBackend);
-                  setStreams(updatedStreams);
-                  setEditStreams(JSON.parse(JSON.stringify(updatedStreams)));
-                  // open editor for the newly created stream (last one)
-                  const created = updatedStreams[updatedStreams.length - 1];
-                  if (created && created.id) toggleEdit(created.id as string);
-                } catch (err: any) {
-                  alert(`Create stream failed: ${err.message}`);
-                }
-              }}>Add stream</button>
-            </div>
-
-            {/* Reset removed: per-row cancel/reload uses Escape and immediate PATCH/POST flows */}
+    <div className="aes67-container">
+      {/* Top Header Card */}
+      <div className="aes67-header">
+        <div className="aes67-header-left">
+          <h2>
+            <GiSoundWaves size={28} color="#f59e0b" />
+            AES67 Audio Streams
+          </h2>
+          <p>Uncompressed real-time audio over IP network streams (IEEE 1588 / AES67 profile)</p>
+          <div className="header-badges">
+            <span className="stat-badge">
+              <span>Total:</span> <strong>{currentStreams.length}</strong>
+            </span>
+            <span className={`stat-badge ${activeCount > 0 ? 'active-count' : ''}`}>
+              <span className="stat-dot" />
+              <span>Active:</span> <strong>{activeCount}</strong>
+            </span>
           </div>
+        </div>
+
+        <div className="aes67-header-actions">
+          <button
+            className="btn-icon-action"
+            onClick={fetchStreamsData}
+            title="Refresh stream status"
+          >
+            <FiRefreshCw size={16} />
+          </button>
+          <button
+            className="btn-primary-action"
+            onClick={() => {
+              setEditingStream(null);
+              setIsModalOpen(true);
+            }}
+          >
+            <FiPlus size={18} />
+            <span>Create Stream</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Transmitters Section (Capture / TX) */}
+      <div className="streams-category-section">
+        <div className="category-title">
+          <div className="title-left">
+            <HiOutlineMicrophone color="#c084fc" size={20} />
+            <span>Transmitters (Capture / Send)</span>
+          </div>
+          <span className="category-count">{transmitters.length} configured</span>
+        </div>
+
+        <div className="stream-cards-grid">
+          {transmitters.length > 0 ? transmitters.map(s => (
+            <StreamCard
+              key={s.id}
+              stream={s}
+              isToggling={togglingStreamId === s.id}
+              onToggle={() => handleToggleStream(s)}
+              onEdit={() => {
+                setEditingStream(s);
+                setIsModalOpen(true);
+              }}
+              onDelete={() => handleDeleteStream(s)}
+            />
+          )) : (
+            <div className="empty-stream-state">
+              <HiOutlineMicrophone size={32} />
+              <p>No audio transmitters configured.</p>
+              <button
+                className="btn-primary-action"
+                style={{ marginTop: '0.4rem', fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
+                onClick={() => {
+                  setEditingStream(null);
+                  setIsModalOpen(true);
+                }}
+              >
+                + Add Transmitter
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Receivers Section (Playback / RX) */}
+      <div className="streams-category-section">
+        <div className="category-title">
+          <div className="title-left">
+            <RiSpeaker3Line color="#60a5fa" size={20} />
+            <span>Receivers (Playback / Output)</span>
+          </div>
+          <span className="category-count">{receivers.length} configured</span>
+        </div>
+
+        <div className="stream-cards-grid">
+          {receivers.length > 0 ? receivers.map(s => (
+            <StreamCard
+              key={s.id}
+              stream={s}
+              isToggling={togglingStreamId === s.id}
+              onToggle={() => handleToggleStream(s)}
+              onEdit={() => {
+                setEditingStream(s);
+                setIsModalOpen(true);
+              }}
+              onDelete={() => handleDeleteStream(s)}
+            />
+          )) : (
+            <div className="empty-stream-state">
+              <RiSpeaker3Line size={32} />
+              <p>No audio receivers configured.</p>
+              <button
+                className="btn-primary-action"
+                style={{ marginTop: '0.4rem', fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
+                onClick={() => {
+                  setEditingStream(null);
+                  setIsModalOpen(true);
+                }}
+              >
+                + Add Receiver
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stream Creation & Editing Modal */}
+      <StreamModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingStream(null);
+        }}
+        onSave={handleSaveStream}
+        initialStream={editingStream}
+        soundInputs={soundInputs}
+        soundOutputs={soundOutputs}
+        netDevices={netDevices}
+        existingStreams={currentStreams}
+      />
+    </div>
+  );
+}
+
+interface StreamCardProps {
+  stream: Stream;
+  isToggling: boolean;
+  onToggle: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+function StreamCard({ stream, isToggling, onToggle, onEdit, onDelete }: StreamCardProps) {
+  const isTx = stream.mode === 'input';
+
+  return (
+    <div className={`modern-stream-card ${stream.enabled ? 'is-active' : ''}`}>
+      {/* Card Top Header */}
+      <div className="card-top">
+        <div className="card-title-group">
+          <div className="stream-id-badge">{stream.id}</div>
+          <div className={`stream-direction-pill ${isTx ? 'tx' : 'rx'}`}>
+            {isTx ? <HiOutlineMicrophone size={12} /> : <RiSpeaker3Line size={12} />}
+            <span>{isTx ? 'Transmitter' : 'Receiver'}</span>
+          </div>
+        </div>
+
+        <div className={`status-pill ${stream.enabled ? 'running' : 'stopped'}`}>
+          {stream.enabled && (
+            <div className="mini-equalizer">
+              <span className="wave-bar w1" />
+              <span className="wave-bar w2" />
+              <span className="wave-bar w3" />
+            </div>
+          )}
+          <span>{stream.enabled ? 'LIVE' : 'STOPPED'}</span>
+        </div>
+      </div>
+
+      {/* Card Details Chips */}
+      <div className="card-details-chips">
+        <div className="chip-row">
+          <BsEthernet className="chip-icon" size={14} />
+          <span className="chip-label">Network:</span>
+          <span className="chip-value mono">{`${stream.addr}:${stream.port}`}</span>
+          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>({stream.net_device || 'eth0'})</span>
+        </div>
+
+        <div className="chip-row">
+          <GiSoundWaves className="chip-icon" size={14} />
+          <span className="chip-label">Device:</span>
+          <span className="chip-value">{stream.hw_device || 'default'}</span>
+        </div>
+
+        <div className="chip-row">
+          <span className="chip-icon" style={{ fontSize: '0.8rem' }}>🎚️</span>
+          <span className="chip-label">Format:</span>
+          <span className="chip-value" style={{ fontSize: '0.78rem' }}>
+            {stream.format || 'S24BE'} • 48 kHz • {stream.channels || 2}ch
+          </span>
+        </div>
+      </div>
+
+      {/* Card Footer Actions */}
+      <div className="card-bottom-actions">
+        <button
+          className={`btn-stream-toggle ${stream.enabled ? 'stop' : 'start'}`}
+          onClick={onToggle}
+          disabled={isToggling}
+          title={stream.enabled ? 'Stop Stream' : 'Start Stream'}
+        >
+          {stream.enabled ? <FiSquare size={14} /> : <FiPlay size={14} />}
+          <span>{isToggling ? 'Processing...' : stream.enabled ? 'Stop' : 'Start'}</span>
+        </button>
+
+        <div className="card-manage-buttons">
+          <button
+            className="btn-card-manage"
+            onClick={onEdit}
+            title="Configure Stream Settings"
+          >
+            <FiSettings size={15} />
+          </button>
+
+          <button
+            className="btn-card-manage delete"
+            onClick={onDelete}
+            title="Delete Stream"
+          >
+            <FiTrash2 size={15} />
+          </button>
         </div>
       </div>
     </div>
