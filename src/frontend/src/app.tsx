@@ -3,10 +3,12 @@ import './app.css';
 import { TopBar } from './components/TopBar';
 import { ApplianceDashboard } from './components/dashboard/ApplianceDashboard';
 import { SettingsDrawer } from './components/settings/SettingsDrawer';
+import { PtpModal } from './components/ptp/PtpModal';
 import { NotificationProvider } from './context/NotificationContext';
 import { ToastContainer } from './components/notifications/ToastContainer';
 import { NotificationDrawer } from './components/notifications/NotificationDrawer';
 import { API_BASE_URL } from './config';
+import type { PtpStatus } from './types';
 
 const SETTINGS_HASHES: Record<string, string> = {
   ethernet: 'ethernet',
@@ -26,6 +28,10 @@ export function App() {
   const [deviceId, setDeviceId] = useState<string>('Loading...');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string>('ethernet');
+
+  // PTP Clock state & modal
+  const [ptpStatus, setPtpStatus] = useState<PtpStatus | null>(null);
+  const [isPtpModalOpen, setIsPtpModalOpen] = useState(false);
 
   const handleOpenSettings = (tab?: string) => {
     const targetTab = tab || settingsTab || 'ethernet';
@@ -71,18 +77,40 @@ export function App() {
       .catch(() => setDeviceId('StagePi'));
   }, []);
 
+  // Poll PTP clock status
+  useEffect(() => {
+    const fetchPtp = () => {
+      fetch(`${API_BASE_URL}/ptp/status`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data: PtpStatus | null) => {
+          if (data) setPtpStatus(data);
+        })
+        .catch(() => {});
+    };
+
+    fetchPtp();
+    const interval = setInterval(fetchPtp, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <NotificationProvider>
       <div id="app-container">
         {/* Top Header */}
         <TopBar
           deviceId={deviceId}
+          ptpStatus={ptpStatus}
           onOpenSettings={() => handleOpenSettings()}
+          onOpenPtp={() => setIsPtpModalOpen(true)}
         />
 
         {/* Main Appliance Dashboard */}
         <main id="main-content">
-          <ApplianceDashboard onOpenSettings={handleOpenSettings} />
+          <ApplianceDashboard
+            onOpenSettings={handleOpenSettings}
+            ptpStatus={ptpStatus}
+            onOpenPtp={() => setIsPtpModalOpen(true)}
+          />
         </main>
 
         {/* Settings Slide-Over Drawer */}
@@ -91,6 +119,14 @@ export function App() {
           onClose={handleCloseSettings}
           initialTab={settingsTab}
           deviceId={deviceId}
+        />
+
+        {/* PTP Clock Inspector & Profile Selector Modal */}
+        <PtpModal
+          isOpen={isPtpModalOpen}
+          onClose={() => setIsPtpModalOpen(false)}
+          initialStatus={ptpStatus}
+          onStatusUpdated={setPtpStatus}
         />
 
         {/* Global Notifications UI */}

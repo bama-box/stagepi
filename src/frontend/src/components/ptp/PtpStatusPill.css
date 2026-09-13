@@ -1,0 +1,133 @@
+/* PtpStatusPill.css */
+.ptp-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #e4e4e7;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  line-height: 1;
+}
+
+.ptp-status-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.ptp-pill-icon {
+  flex-shrink: 0;
+}
+
+.ptp-pulse-indicator {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 8px;
+  height: 8px;
+}
+
+.ptp-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #71717a;
+}
+
+/* Status variants */
+.ptp-status-pill.locked {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+}
+.ptp-status-pill.locked .ptp-dot {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: ptp-pulse 1.8s infinite;
+}
+
+.ptp-status-pill.master {
+  background: rgba(168, 85, 247, 0.14);
+  border-color: rgba(168, 85, 247, 0.45);
+  color: #d8b4fe;
+}
+.ptp-status-pill.master .ptp-dot {
+  background: #a855f7;
+  box-shadow: 0 0 8px #a855f7;
+  animation: ptp-pulse 2s infinite;
+}
+
+.ptp-status-pill.syncing {
+  background: rgba(234, 179, 8, 0.14);
+  border-color: rgba(234, 179, 8, 0.45);
+  color: #fde047;
+}
+.ptp-status-pill.syncing .ptp-dot {
+  background: #eab308;
+  box-shadow: 0 0 8px #eab308;
+  animation: ptp-blink 1s infinite;
+}
+
+.ptp-status-pill.free-running {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+.ptp-status-pill.free-running .ptp-dot {
+  background: #f59e0b;
+}
+
+.ptp-status-pill.faulty {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+.ptp-status-pill.faulty .ptp-dot {
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+}
+
+.ptp-status-pill.inactive {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #a1a1aa;
+}
+.ptp-status-pill.inactive .ptp-dot {
+  background: #52525b;
+}
+
+.ptp-profile-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  letter-spacing: 0.04em;
+}
+
+@keyframes ptp-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.6;
+  }
+}
+
+@keyframes ptp-blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}

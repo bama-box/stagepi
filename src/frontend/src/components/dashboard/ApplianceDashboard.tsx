@@ -15,8 +15,10 @@ import { HiOutlineMicrophone } from 'react-icons/hi2';
 import { BsEthernet } from 'react-icons/bs';
 import { StreamModal, type Stream } from '../views/StreamModal';
 import { PiHardwareMap, type AudioTopology } from '../hardware/PiHardwareMap';
+import { PtpStatusPill } from '../ptp/PtpStatusPill';
 import { useNotification } from '../../context/NotificationContext';
 import { API_BASE_URL } from '../../config';
+import type { PtpStatus } from '../../types';
 import './ApplianceDashboard.css';
 
 function streamToBackend(stream: Partial<Stream>): any {
@@ -55,9 +57,11 @@ interface ServiceStatus {
 
 interface ApplianceDashboardProps {
   onOpenSettings: (tab?: string) => void;
+  ptpStatus?: PtpStatus | null;
+  onOpenPtp?: () => void;
 }
 
-export function ApplianceDashboard({ onOpenSettings }: ApplianceDashboardProps) {
+export function ApplianceDashboard({ onOpenSettings, ptpStatus, onOpenPtp }: ApplianceDashboardProps) {
   const { notify, openStreamLogs } = useNotification();
 
   // Streams state
@@ -411,6 +415,8 @@ export function ApplianceDashboard({ onOpenSettings }: ApplianceDashboardProps) 
           <PiHardwareMap
             topology={topology}
             activeStreams={currentStreams}
+            ptpStatus={ptpStatus}
+            onOpenPtp={onOpenPtp}
             onAddStreamForDevice={(dev, mode) => {
               setEditingStream({
                 id: `s-${Math.random().toString(16).slice(2, 10)}`,
@@ -436,17 +442,22 @@ export function ApplianceDashboard({ onOpenSettings }: ApplianceDashboardProps) 
             <h2 className="section-title">AES67 Audio Streams</h2>
             <p className="section-subtitle">Real-time network audio routing to physical hardware channels</p>
           </div>
-          <button
-            type="button"
-            className="action-btn-primary"
-            onClick={() => {
-              setEditingStream(null);
-              setIsModalOpen(true);
-            }}
-          >
-            <FiPlus size={16} />
-            <span>Add Stream</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+            {onOpenPtp && (
+              <PtpStatusPill status={ptpStatus || null} onClick={onOpenPtp} />
+            )}
+            <button
+              type="button"
+              className="action-btn-primary"
+              onClick={() => {
+                setEditingStream(null);
+                setIsModalOpen(true);
+              }}
+            >
+              <FiPlus size={16} />
+              <span>Add Stream</span>
+            </button>
+          </div>
         </div>
 
         {currentStreams.length === 0 ? (

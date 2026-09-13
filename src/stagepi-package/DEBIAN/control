@@ -35,6 +35,7 @@ Depends: shairport-sync,
  psutils,
  dhcpcd5,
  jq,
+ linuxptp,
  supervisor
 Maintainer: Shai Taharlev <stagepi@bama-box.com>
 Description: StagePi - your DIY stagebox for audio routing and control.

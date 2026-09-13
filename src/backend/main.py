@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from api import (
     network_routes,
+    ptp_routes,
     services_routes,
     sound_hw_routes,
     streams_routes,
@@ -76,6 +77,7 @@ app.include_router(network_routes.router, prefix="/api/network", tags=["Network"
 app.include_router(services_routes.router, prefix="/api/services", tags=["Services"])
 app.include_router(sound_hw_routes.router, prefix="/api/sound", tags=["Sound"])
 app.include_router(streams_routes.router, prefix="/api/streams", tags=["Streams"])
+app.include_router(ptp_routes.router, prefix="/api/ptp", tags=["PTP"])
 
 # Backward compatibility routes (legacy paths without /api)
 app.include_router(system_routes.router, prefix="/system", include_in_schema=False)
@@ -83,6 +85,7 @@ app.include_router(network_routes.router, prefix="/network", include_in_schema=F
 app.include_router(services_routes.router, prefix="/services", include_in_schema=False)
 app.include_router(sound_hw_routes.router, prefix="/sound", include_in_schema=False)
 app.include_router(streams_routes.router, prefix="/streams", include_in_schema=False)
+app.include_router(ptp_routes.router, prefix="/ptp", include_in_schema=False)
 
 # NMOS Routes
 app.include_router(nmos_node_router, prefix="/x-nmos/node", tags=["NMOS Node"])

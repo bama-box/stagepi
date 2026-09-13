@@ -4,11 +4,13 @@ import {
   FiTv,
   FiPlus,
   FiInfo,
+  FiClock,
 } from 'react-icons/fi';
 import { RiSpeaker3Line } from 'react-icons/ri';
 import { GiSoundWaves } from 'react-icons/gi';
 import { BsUsbSymbol, BsEthernet } from 'react-icons/bs';
 import type { Stream } from '../views/StreamModal';
+import type { PtpStatus } from '../../types';
 import './PiHardwareMap.css';
 
 export interface AudioInterface {
@@ -44,13 +46,17 @@ export interface AudioTopology {
 interface PiHardwareMapProps {
   topology: AudioTopology | null;
   activeStreams: Stream[];
+  ptpStatus?: PtpStatus | null;
   onAddStreamForDevice?: (device: string, mode: 'input' | 'output') => void;
+  onOpenPtp?: () => void;
 }
 
 export function PiHardwareMap({
   topology,
   activeStreams,
+  ptpStatus,
   onAddStreamForDevice,
+  onOpenPtp,
 }: PiHardwareMapProps) {
   const [selectedPortId, setSelectedPortId] = useState<string>('gpio_hat');
 
@@ -73,10 +79,12 @@ export function PiHardwareMap({
   };
 
   // Currently selected interface
-  const selectedInterface =
-    interfaces.find((i) => i.port_id === selectedPortId) ||
-    interfaces.find((i) => i.is_primary) ||
-    interfaces[0];
+  const isEthernetSelected = selectedPortId === 'ethernet';
+  const selectedInterface = isEthernetSelected
+    ? null
+    : (interfaces.find((i) => i.port_id === selectedPortId) ||
+       interfaces.find((i) => i.is_primary) ||
+       interfaces[0]);
 
   const selectedStreams = selectedInterface
     ? getRunningStreamsForDevice(selectedInterface.alsa_device, selectedInterface.card_id)
@@ -485,7 +493,71 @@ export function PiHardwareMap({
         </div>
 
         {/* Focused Connector Inspector Bar (Horizontal, taking NO side space) */}
-        {selectedInterface ? (
+        {isEthernetSelected ? (
+          <div className="focused-connector-bar ethernet-bar">
+            <div className="connector-bar-main">
+              <div className="connector-bar-icon-pill" style={{ color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)' }}>
+                <BsEthernet size={24} color="#38bdf8" />
+              </div>
+
+              <div className="connector-bar-info">
+                <div className="connector-bar-tags">
+                  <span className="connector-type-badge" style={{ color: '#38bdf8' }}>NETWORK AoIP</span>
+                  <span className="connector-port-badge">RJ45 Gigabit Ethernet • eth0</span>
+                  <span className="connector-alsa-badge">10.42.10.2</span>
+                </div>
+                <h4 className="connector-bar-title">Gigabit Ethernet Network Trunk</h4>
+              </div>
+            </div>
+
+            <div className="connector-bar-stats">
+              <div className="connector-stat-item">
+                <span className="stat-label">PTP Clock Status</span>
+                <span className="stat-val">
+                  {ptpStatus?.lock_status === 'locked' && (
+                    <span className="active-streams-tag">
+                      <span className="dot pulse" /> Locked ({ptpStatus.master_offset_us}µs)
+                    </span>
+                  )}
+                  {ptpStatus?.lock_status === 'master' && (
+                    <span style={{ color: '#d8b4fe', fontWeight: 700 }}>
+                      Grandmaster (Domain {ptpStatus.domain})
+                    </span>
+                  )}
+                  {ptpStatus?.lock_status === 'syncing' && (
+                    <span style={{ color: '#fde047', fontWeight: 700 }}>
+                      Acquiring Lock...
+                    </span>
+                  )}
+                  {(!ptpStatus || ptpStatus.lock_status === 'free_running' || ptpStatus.lock_status === 'inactive') && (
+                    <span className="idle-streams-tag">
+                      {ptpStatus?.lock_status === 'free_running' ? 'Free-Running' : 'Daemon Stopped'}
+                    </span>
+                  )}
+                </span>
+              </div>
+
+              <div className="connector-stat-item">
+                <span className="stat-label">Active Profile</span>
+                <span className="stat-val">{ptpStatus?.profile_name || 'RAVENNA / AES67'}</span>
+              </div>
+            </div>
+
+            {onOpenPtp && (
+              <div className="connector-bar-actions">
+                <button
+                  type="button"
+                  className="connector-action-btn"
+                  onClick={onOpenPtp}
+                  title="Configure PTP profiles and inspect clock synchronization"
+                >
+                  <FiClock size={16} />
+                  <span>Configure PTP Clock</span>
+                </button>
+              </div>
+            )}
+          </div>
+        ) : selectedInterface ? (
           <div className="focused-connector-bar">
             <div className="connector-bar-main">
               <div className="connector-bar-icon-pill">
