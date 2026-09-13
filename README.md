@@ -68,10 +68,10 @@ Download the latest [StagePi image](https://sourceforge.net/projects/stagepi/fil
 ## First Boot
 
 1. **Power on your Raspberry Pi.**
-2. A default Wi-Fi hotspot will appear: `stagepi-[hostname]`
-3. Connect to the hotspot from your computer or mobile device.
-4. Open a browser and go to `http://[hostname].local:8000` or use the Pi’s IP address.
-5. Follow the setup instructions in the web interface.
+2. A default Wi-Fi hotspot will appear: `StagePi-[hostname]` (default password: `stage314`).
+3. Connect to the hotspot from your computer or mobile device (or connect via Ethernet).
+4. Open a browser and navigate to `http://stagepi.local` or `http://10.42.0.1` (or the Pi’s IP address on your network). The web interface runs on standard HTTP port 80.
+5. Use the web interface to configure audio streams, network settings (DHCP or Static IP), and services.
 
 > Detailed instructions on configuring audio routing, connecting to a mixer, and controlling the stage box will be added as the project develops.
 

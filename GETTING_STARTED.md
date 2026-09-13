@@ -270,7 +270,7 @@ StagePi uses **Supervisor** to manage the application processes and **systemd** 
 ### Application Services (Managed by Supervisor)
 
 Supervisor runs as a systemd service and manages:
-- **stagepi-backend**: FastAPI backend (serves both API and frontend on port 8000)
+- **stagepi-backend**: FastAPI backend (serves both API and frontend on port 80)
 
 Supervisor commands on the Pi:
 ```bash
